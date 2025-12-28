@@ -474,6 +474,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true });
       break;
 
+    case 'jumpTo':
+      // Jump to a specific item in the spokenItems array
+      const targetIndex = message.index;
+      if (targetIndex >= 0 && targetIndex < spokenItems.length) {
+        // Cancel current speech and clear queue
+        window.speechSynthesis.cancel();
+        speechQueue = [];
+        isProcessingQueue = false;
+        isPaused = false;
+        
+        // Jump to the target item
+        currentSpeakingIndex = targetIndex;
+        const item = spokenItems[currentSpeakingIndex];
+        console.log(`${TAG}: Jumping to item ${currentSpeakingIndex + 1} of ${spokenItems.length}`);
+        speak(item.text, false);
+        sendResponse({ success: true, currentIndex: currentSpeakingIndex, total: spokenItems.length, isPaused: false });
+      } else {
+        console.log(`${TAG}: Invalid jump index: ${targetIndex} (valid range: 0-${spokenItems.length - 1})`);
+        sendResponse({ success: false, message: 'Invalid item index' });
+      }
+      break;
+
     default:
       sendResponse({ success: false, message: 'Unknown action' });
   }

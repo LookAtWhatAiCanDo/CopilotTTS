@@ -65,6 +65,28 @@
       font-size: 14px;
       color: #666;
     }
+    .progress-slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+    }
+    .progress-slider-container input[type="range"] {
+      flex: 1;
+      cursor: pointer;
+      height: 25px;
+    }
+    .progress-slider-container input[type="range"]:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .progress-slider-container .progress-label {
+      font-size: 12px;
+      color: #666;
+      min-width: 80px;
+      text-align: right;
+      font-weight: 500;
+    }
     .slider-container {
       display: flex;
       flex-direction: column;
@@ -100,6 +122,10 @@
       <button id="previousButton" title="Previous item">⏮ Prev</button>
       <button id="stopButton" class="stop" title="Stop speaking">⏹ Stop</button>
       <button id="nextButton" title="Next item">Next ⏭</button>
+    </div>
+    <div class="progress-slider-container">
+      <input type="range" id="progressSlider" min="1" max="1" value="1" title="Navigate to item">
+      <span class="progress-label" id="progressLabel">Item 0 / 0</span>
     </div>
     <button id="testSpeakButton" title="Test speech synthesis">🔊 Test Speak</button>
     <div class="slider-container">

@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const rateValue = document.getElementById('rateValue');
   const pitchSlider = document.getElementById('pitchSlider');
   const pitchValue = document.getElementById('pitchValue');
+  const progressSlider = document.getElementById('progressSlider');
+  const progressLabel = document.getElementById('progressLabel');
 
   // Helper function to send message to content script
   async function sendMessageToActiveTab(message) {
@@ -66,13 +68,36 @@ document.addEventListener('DOMContentLoaded', function() {
           statusDiv.textContent = 'Ready';
         }
       }
+      
+      // Update progress slider
+      updateProgressSlider(response);
     } else if (response && response.message) {
       statusDiv.textContent = response.message;
     }
   }
 
+  // Update progress slider position and range
+  function updateProgressSlider(response) {
+    if (response && response.total !== undefined) {
+      const total = response.total;
+      const currentIndex = response.currentIndex >= 0 ? response.currentIndex : 0;
+      
+      if (total > 0) {
+        progressSlider.disabled = false;
+        progressSlider.max = total;
+        progressSlider.value = currentIndex + 1;
+        progressLabel.textContent = `Item ${currentIndex + 1} / ${total}`;
+      } else {
+        progressSlider.disabled = true;
+        progressSlider.max = 1;
+        progressSlider.value = 1;
+        progressLabel.textContent = 'Item 0 / 0';
+      }
+    }
+  }
+
   // Get initial status
-  async function refreshStatus() {
+  function refreshStatus() {
     const response = await sendMessageToActiveTab({ action: 'getStatus' });
     if (response && response.success) {
       // Update stop button based on pause state
@@ -96,6 +121,9 @@ document.addEventListener('DOMContentLoaded', function() {
           statusDiv.textContent = 'Ready';
         }
       }
+      
+      // Update progress slider
+      updateProgressSlider(response);
     }
   }
 
@@ -170,6 +198,24 @@ document.addEventListener('DOMContentLoaded', function() {
     pitchValue.textContent = pitch.toFixed(1) + 'x';
     chrome.storage.sync.set({ speechPitch: pitch });
     sendMessageToActiveTab({ action: 'setPitch', pitch: pitch });
+  });
+
+  // Progress slider handler
+  progressSlider.addEventListener('change', async function() {
+    const targetIndex = parseInt(progressSlider.value) - 1; // Convert to 0-based index
+    progressLabel.textContent = `Jumping to ${targetIndex + 1}...`;
+    const response = await sendMessageToActiveTab({ action: 'jumpTo', index: targetIndex });
+    if (response && response.success) {
+      updateProgressSlider(response);
+      updateStatus(response);
+    }
+  });
+
+  // Update label as slider is being dragged (before release)
+  progressSlider.addEventListener('input', function() {
+    const targetIndex = parseInt(progressSlider.value);
+    const maxValue = parseInt(progressSlider.max);
+    progressLabel.textContent = `Item ${targetIndex} / ${maxValue}`;
   });
 
   // Initial status check
