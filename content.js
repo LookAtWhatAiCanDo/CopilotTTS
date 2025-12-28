@@ -406,7 +406,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Test speech by speaking a simple phrase
       const testText = 'This is a test of the text to speech system.';
       console.log(`${TAG}: Test speak requested from popup`);
-      speak(testText, true); // Cancel any current speech
+      testSpeak(testText); // Call testSpeak directly (has user gesture from button click)
       sendResponse({ success: true, message: 'Test speech initiated' });
       break;
 
@@ -529,10 +529,9 @@ function init() {
   console.log(`${TAG}: ⚠️  Waiting for user interaction (click or key press) to enable speech...`);
   console.log(`${TAG}: ⚠️  Speech is queued and will play automatically after you click anywhere on the page`);
   
-  // Wait for voices to be fully loaded, then queue test speech
-  setTimeout(() => {
-    speakOrQueue("Initialized");
-  }, 2000); // Increased delay to 2 seconds
+  // Queue test speech immediately - no setTimeout wrapper
+  // This will be spoken when user clicks
+  speakOrQueue("Initialized");
   
   // TEMPORARILY COMMENTED OUT - DOM monitoring and auto-queueing
   // This is to debug basic speech functionality first
@@ -558,9 +557,8 @@ function init() {
 // Function to speak after page is fully loaded
 function onPageLoaded() {
   console.log(`${TAG}: Page fully loaded`);
-  setTimeout(() => {
-    speakOrQueue("Page Loaded");
-  }, 1000); // Increased delay to 1 second
+  // Queue speech immediately - no setTimeout wrapper
+  speakOrQueue("Page Loaded");
 }
 
 // Start when DOM is ready
