@@ -177,45 +177,32 @@ function processSessionContainer(sessionContainer) {
   //console.log(`${TAG}: Session container classes:`, sessionContainer.className);
   //console.log(`${TAG}: Session container children count:`, sessionContainer.children.length);
   
-  // Find all markdown containers within this session using attribute selector
-  const markdownContainers = sessionContainer.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
-  //console.log(`${TAG}: Found ${markdownContainers.length} markdown container(s) in session`);
+  // Find markdown containers only within SessionLogs-module__markdownWrapper (Copilot responses)
+  // Exclude markdown containers inside Tool-module__detailsContainer (tool logs)
+  const sessionLogsWrappers = sessionContainer.querySelectorAll('[class*="SessionLogs-module__markdownWrapper--"]');
+  const markdownContainers = [];
   
-  if (markdownContainers.length === 0) {
-    // Debug: log what we do have
-    const allDivs = sessionContainer.querySelectorAll('div');
-    //console.log(`${TAG}: Total divs in session:`, allDivs.length);
-    
-    // Check for markdown-body class
-    const markdownBodyElements = sessionContainer.querySelectorAll('.markdown-body');
-    //console.log(`${TAG}: Elements with markdown-body class:`, markdownBodyElements.length);
-    
-    // Check for SessionLogs wrappers
-    const sessionLogsWrappers = sessionContainer.querySelectorAll('[class*="SessionLogs-module__markdownWrapper--"]');
-    //console.log(`${TAG}: SessionLogs wrappers found:`, sessionLogsWrappers.length);
-    
-    // Check each wrapper
-    sessionLogsWrappers.forEach((wrapper, i) => {
-      //console.log(`${TAG}: Wrapper ${i} innerHTML length:`, wrapper.innerHTML.length);
-      //console.log(`${TAG}: Wrapper ${i} children:`, wrapper.children.length);
-      const markdownInWrapper = wrapper.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
-      //console.log(`${TAG}: Markdown containers in wrapper ${i}:`, markdownInWrapper.length);
-    });
-    
-    // Check for any MarkdownRenderer in all divs
-    Array.from(allDivs).forEach((div, i) => {
-      if (div.className && div.className.includes('MarkdownRenderer')) {
-        //console.log(`${TAG}: Found MarkdownRenderer element [${i}]:`, div.className, div);
+  sessionLogsWrappers.forEach(wrapper => {
+    // Get markdown containers directly within this wrapper
+    const markdownsInWrapper = wrapper.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
+    markdownsInWrapper.forEach(container => {
+      // Verify this container is not inside a Tool-module__detailsContainer
+      let parent = container.parentElement;
+      let isInsideTool = false;
+      while (parent && parent !== wrapper) {
+        if (parent.className && parent.className.includes('Tool-module__detailsContainer')) {
+          isInsideTool = true;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if (!isInsideTool) {
+        markdownContainers.push(container);
       }
     });
-    
-    // Check if session is expanded
-    const contentContainer = sessionContainer.querySelector('[class*="Session-module__contentContainer--"]');
-    if (contentContainer) {
-      const isExpanded = contentContainer.getAttribute('data-expanded');
-      //console.log(`${TAG}: Session content container data-expanded:`, isExpanded);
-    }
-  }
+  });
+  
+  console.log(`${TAG}: Found ${markdownContainers.length} Copilot response markdown container(s) in session (excluding tool logs)`);
   
   markdownContainers.forEach(container => {
     //console.log(`${TAG}: Processing markdown container with classes:`, container.className);
@@ -238,9 +225,30 @@ function processSessionContainer(sessionContainer) {
           const childMarkdown = node.querySelectorAll ? node.querySelectorAll('[class*="MarkdownRenderer-module__container--"]') : [];
           newMarkdownContainers.push(...Array.from(childMarkdown));
           
-          if (newMarkdownContainers.length > 0) {
-            //console.log(`${TAG}: Found ${newMarkdownContainers.length} new markdown container(s) added to session`);
-            newMarkdownContainers.forEach(container => {
+          // Filter out markdown containers inside tool logs
+          const filteredContainers = newMarkdownContainers.filter(container => {
+            // Check if container is inside a Tool-module__detailsContainer
+            let parent = container.parentElement;
+            while (parent && parent !== sessionContainer) {
+              if (parent.className && parent.className.includes('Tool-module__detailsContainer')) {
+                return false; // Exclude this container
+              }
+              parent = parent.parentElement;
+            }
+            // Also check if container is inside SessionLogs-module__markdownWrapper (Copilot response)
+            parent = container.parentElement;
+            while (parent && parent !== sessionContainer) {
+              if (parent.className && parent.className.includes('SessionLogs-module__markdownWrapper')) {
+                return true; // Include this container
+              }
+              parent = parent.parentElement;
+            }
+            return false; // Exclude if not in SessionLogs wrapper
+          });
+          
+          if (filteredContainers.length > 0) {
+            console.log(`${TAG}: Found ${filteredContainers.length} new Copilot response markdown container(s) added to session`);
+            filteredContainers.forEach(container => {
               processMarkdownContainer(container);
               observeMarkdownContainer(container);
             });
