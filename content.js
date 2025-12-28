@@ -117,8 +117,11 @@ function speak(text, cancelPrevious = false) {
 
 // Process the next item in the speech queue
 function processNextInQueue() {
-  if (isPaused || isProcessingQueue || speechQueue.length === 0) {
-    isProcessingQueue = false;
+  // Reset the processing flag first
+  isProcessingQueue = false;
+  
+  // Check if we should continue processing
+  if (isPaused || speechQueue.length === 0) {
     return;
   }
   
