@@ -164,7 +164,7 @@ function addSpokenItem(text, element) {
 // Process a markdown container and extract paragraphs
 function processMarkdownContainer(container) {
   const paragraphs = container.querySelectorAll('p');
-  console.log(`${TAG}: Found ${paragraphs.length} paragraph(s) in markdown container`);
+  //console.log(`${TAG}: Found ${paragraphs.length} paragraph(s) in markdown container`);
   paragraphs.forEach(p => {
     const text = extractTextFromElement(p);
     addSpokenItem(text, p);
@@ -173,39 +173,39 @@ function processMarkdownContainer(container) {
 
 // Process a session details container
 function processSessionContainer(sessionContainer) {
-  console.log(`${TAG}: Processing session container`, sessionContainer);
-  console.log(`${TAG}: Session container classes:`, sessionContainer.className);
-  console.log(`${TAG}: Session container children count:`, sessionContainer.children.length);
+  //console.log(`${TAG}: Processing session container`, sessionContainer);
+  //console.log(`${TAG}: Session container classes:`, sessionContainer.className);
+  //console.log(`${TAG}: Session container children count:`, sessionContainer.children.length);
   
   // Find all markdown containers within this session using attribute selector
   const markdownContainers = sessionContainer.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
-  console.log(`${TAG}: Found ${markdownContainers.length} markdown container(s) in session`);
+  //console.log(`${TAG}: Found ${markdownContainers.length} markdown container(s) in session`);
   
   if (markdownContainers.length === 0) {
     // Debug: log what we do have
     const allDivs = sessionContainer.querySelectorAll('div');
-    console.log(`${TAG}: Total divs in session:`, allDivs.length);
+    //console.log(`${TAG}: Total divs in session:`, allDivs.length);
     
     // Check for markdown-body class
     const markdownBodyElements = sessionContainer.querySelectorAll('.markdown-body');
-    console.log(`${TAG}: Elements with markdown-body class:`, markdownBodyElements.length);
+    //console.log(`${TAG}: Elements with markdown-body class:`, markdownBodyElements.length);
     
     // Check for SessionLogs wrappers
     const sessionLogsWrappers = sessionContainer.querySelectorAll('[class*="SessionLogs-module__markdownWrapper--"]');
-    console.log(`${TAG}: SessionLogs wrappers found:`, sessionLogsWrappers.length);
+    //console.log(`${TAG}: SessionLogs wrappers found:`, sessionLogsWrappers.length);
     
     // Check each wrapper
     sessionLogsWrappers.forEach((wrapper, i) => {
-      console.log(`${TAG}: Wrapper ${i} innerHTML length:`, wrapper.innerHTML.length);
-      console.log(`${TAG}: Wrapper ${i} children:`, wrapper.children.length);
+      //console.log(`${TAG}: Wrapper ${i} innerHTML length:`, wrapper.innerHTML.length);
+      //console.log(`${TAG}: Wrapper ${i} children:`, wrapper.children.length);
       const markdownInWrapper = wrapper.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
-      console.log(`${TAG}: Markdown containers in wrapper ${i}:`, markdownInWrapper.length);
+      //console.log(`${TAG}: Markdown containers in wrapper ${i}:`, markdownInWrapper.length);
     });
     
     // Check for any MarkdownRenderer in all divs
     Array.from(allDivs).forEach((div, i) => {
       if (div.className && div.className.includes('MarkdownRenderer')) {
-        console.log(`${TAG}: Found MarkdownRenderer element [${i}]:`, div.className, div);
+        //console.log(`${TAG}: Found MarkdownRenderer element [${i}]:`, div.className, div);
       }
     });
     
@@ -213,12 +213,12 @@ function processSessionContainer(sessionContainer) {
     const contentContainer = sessionContainer.querySelector('[class*="Session-module__contentContainer--"]');
     if (contentContainer) {
       const isExpanded = contentContainer.getAttribute('data-expanded');
-      console.log(`${TAG}: Session content container data-expanded:`, isExpanded);
+      //console.log(`${TAG}: Session content container data-expanded:`, isExpanded);
     }
   }
   
   markdownContainers.forEach(container => {
-    console.log(`${TAG}: Processing markdown container with classes:`, container.className);
+    //console.log(`${TAG}: Processing markdown container with classes:`, container.className);
     processMarkdownContainer(container);
     
     // Set up observer for new paragraphs in this container
@@ -239,7 +239,7 @@ function processSessionContainer(sessionContainer) {
           newMarkdownContainers.push(...Array.from(childMarkdown));
           
           if (newMarkdownContainers.length > 0) {
-            console.log(`${TAG}: Found ${newMarkdownContainers.length} new markdown container(s) added to session`);
+            //console.log(`${TAG}: Found ${newMarkdownContainers.length} new markdown container(s) added to session`);
             newMarkdownContainers.forEach(container => {
               processMarkdownContainer(container);
               observeMarkdownContainer(container);
@@ -255,7 +255,7 @@ function processSessionContainer(sessionContainer) {
     subtree: true
   });
   
-  console.log(`${TAG}: Set up content observer for session container`);
+  //console.log(`${TAG}: Set up content observer for session container`);
 }
 
 // Observe a markdown container for new paragraphs
@@ -265,21 +265,21 @@ function observeMarkdownContainer(container) {
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
           if (node.tagName === 'P') {
-            console.log(`${TAG}: Found new <p> element`);
+            //console.log(`${TAG}: Found new <p> element`);
             const text = extractTextFromElement(node);
             if (addSpokenItem(text, node)) {
-              console.log(`${TAG}: New paragraph detected`);
+              //console.log(`${TAG}: New paragraph detected`);
             }
           }
           // Check for nested paragraphs
           const nestedPs = node.querySelectorAll('p');
           if (nestedPs.length > 0) {
-            console.log(`${TAG}: Found ${nestedPs.length} nested <p> element(s)`);
+            //console.log(`${TAG}: Found ${nestedPs.length} nested <p> element(s)`);
           }
           nestedPs.forEach(p => {
             const text = extractTextFromElement(p);
             if (addSpokenItem(text, p)) {
-              console.log(`${TAG}: New nested paragraph detected`);
+              //console.log(`${TAG}: New nested paragraph detected`);
             }
           });
         }
@@ -292,7 +292,7 @@ function observeMarkdownContainer(container) {
     subtree: true
   });
 
-  console.log(`${TAG}: Observing markdown container for new paragraphs`);
+  //console.log(`${TAG}: Observing markdown container for new paragraphs`);
 }
 
 // Find and monitor the main TaskChat container
@@ -301,15 +301,15 @@ function monitorTaskChat() {
   const taskChatContainer = document.querySelector('[class*="TaskChat-module__stickableContainer--"]');
   
   if (!taskChatContainer) {
-    console.log(`${TAG}: TaskChat container not found yet, will retry...`);
+    //console.log(`${TAG}: TaskChat container not found yet, will retry...`);
     return false;
   }
 
-  console.log(`${TAG}: Found TaskChat container`);
+  //console.log(`${TAG}: Found TaskChat container`);
 
   // Find all existing session containers
   const sessionContainers = taskChatContainer.querySelectorAll('[class*="Session-module__detailsContainer--"]');
-  console.log(`${TAG}: Found ${sessionContainers.length} existing session containers`);
+  //console.log(`${TAG}: Found ${sessionContainers.length} existing session containers`);
   
   sessionContainers.forEach(container => {
     processSessionContainer(container);
@@ -322,17 +322,17 @@ function monitorTaskChat() {
         if (node.nodeType === Node.ELEMENT_NODE) {
           // Check if this is a session container
           if (node.classList && Array.from(node.classList).some(c => c.includes('Session-module__detailsContainer--'))) {
-            console.log(`${TAG}: Found new session container element`);
-            console.log(`${TAG}: New session container detected`);
+            //console.log(`${TAG}: Found new session container element`);
+            //console.log(`${TAG}: New session container detected`);
             processSessionContainer(node);
           }
           // Also check nested session containers
           const nestedSessions = node.querySelectorAll('[class*="Session-module__detailsContainer--"]');
           if (nestedSessions.length > 0) {
-            console.log(`${TAG}: Found ${nestedSessions.length} nested session container(s)`);
+            //console.log(`${TAG}: Found ${nestedSessions.length} nested session container(s)`);
           }
           nestedSessions.forEach(session => {
-            console.log(`${TAG}: New nested session container detected`);
+            //console.log(`${TAG}: New nested session container detected`);
             processSessionContainer(session);
           });
         }
@@ -345,7 +345,7 @@ function monitorTaskChat() {
     subtree: true
   });
 
-  console.log(`${TAG}: Monitoring TaskChat for new sessions`);
+  //console.log(`${TAG}: Monitoring TaskChat for new sessions`);
   return true;
 }
 
@@ -423,7 +423,7 @@ function init() {
     // Stop trying after 30 seconds
     setTimeout(() => {
       clearInterval(checkInterval);
-      console.log(`${TAG}: Stopped looking for TaskChat container`);
+      //console.log(`${TAG}: Stopped looking for TaskChat container`);
     }, 30000);
   }
 }
