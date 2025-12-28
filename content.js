@@ -73,22 +73,29 @@ function extractTextFromElement(element) {
   return text;
 }
 
+// Helper function to add a spoken item if not already tracked
+function addSpokenItem(text, element) {
+  if (text && !spokenItems.some(item => item.text === text)) {
+    const item = {
+      text: text,
+      element: element,
+      timestamp: Date.now()
+    };
+    spokenItems.push(item);
+    currentIndex = spokenItems.length - 1;
+    console.log(`${TAG}: Found new text to speak (${spokenItems.length}):`, text.substring(0, 100));
+    speak(text);
+    return true;
+  }
+  return false;
+}
+
 // Process a markdown container and extract paragraphs
 function processMarkdownContainer(container) {
   const paragraphs = container.querySelectorAll('p');
   paragraphs.forEach(p => {
     const text = extractTextFromElement(p);
-    if (text && !spokenItems.some(item => item.text === text)) {
-      const item = {
-        text: text,
-        element: p,
-        timestamp: Date.now()
-      };
-      spokenItems.push(item);
-      currentIndex = spokenItems.length - 1;
-      console.log(`${TAG}: Found new text to speak (${spokenItems.length}):`, text.substring(0, 100));
-      speak(text);
-    }
+    addSpokenItem(text, p);
   });
 }
 
@@ -96,8 +103,8 @@ function processMarkdownContainer(container) {
 function processSessionContainer(sessionContainer) {
   console.log(`${TAG}: Processing session container`);
   
-  // Find all markdown containers within this session
-  const markdownContainers = sessionContainer.querySelectorAll('.markdown-body.MarkdownRenderer-module__container--dNKcF');
+  // Find all markdown containers within this session using attribute selector
+  const markdownContainers = sessionContainer.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
   
   markdownContainers.forEach(container => {
     processMarkdownContainer(container);
@@ -115,32 +122,16 @@ function observeMarkdownContainer(container) {
         if (node.nodeType === Node.ELEMENT_NODE) {
           if (node.tagName === 'P') {
             const text = extractTextFromElement(node);
-            if (text && !spokenItems.some(item => item.text === text)) {
-              const item = {
-                text: text,
-                element: node,
-                timestamp: Date.now()
-              };
-              spokenItems.push(item);
-              currentIndex = spokenItems.length - 1;
-              console.log(`${TAG}: New paragraph detected (${spokenItems.length}):`, text.substring(0, 100));
-              speak(text);
+            if (addSpokenItem(text, node)) {
+              console.log(`${TAG}: New paragraph detected`);
             }
           }
           // Check for nested paragraphs
           const nestedPs = node.querySelectorAll('p');
           nestedPs.forEach(p => {
             const text = extractTextFromElement(p);
-            if (text && !spokenItems.some(item => item.text === text)) {
-              const item = {
-                text: text,
-                element: p,
-                timestamp: Date.now()
-              };
-              spokenItems.push(item);
-              currentIndex = spokenItems.length - 1;
-              console.log(`${TAG}: New nested paragraph detected (${spokenItems.length}):`, text.substring(0, 100));
-              speak(text);
+            if (addSpokenItem(text, p)) {
+              console.log(`${TAG}: New nested paragraph detected`);
             }
           });
         }
@@ -216,7 +207,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         currentIndex--;
         const item = spokenItems[currentIndex];
         speak(item.text);
-        sendResponse({ success: true, index: currentIndex, total: spokenItems.length });
+        sendResponse({ success: true, currentIndex: currentIndex, total: spokenItems.length });
       } else {
         sendResponse({ success: false, message: 'Already at first item' });
       }
@@ -227,7 +218,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         currentIndex++;
         const item = spokenItems[currentIndex];
         speak(item.text);
-        sendResponse({ success: true, index: currentIndex, total: spokenItems.length });
+        sendResponse({ success: true, currentIndex: currentIndex, total: spokenItems.length });
       } else {
         sendResponse({ success: false, message: 'Already at last item' });
       }
