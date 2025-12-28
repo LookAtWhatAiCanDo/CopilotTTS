@@ -409,6 +409,52 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true; // Keep message channel open for async response
 });
 
+// Test speech function that doesn't use queue
+function testSpeak(text) {
+  console.log(`${TAG}: TEST SPEAK called with: "${text}"`);
+  
+  // Ensure voices are loaded
+  const voices = window.speechSynthesis.getVoices();
+  console.log(`${TAG}: Available voices: ${voices.length}`);
+  
+  if (voices.length === 0) {
+    console.error(`${TAG}: No voices available yet!`);
+    return;
+  }
+  
+  if (!selectedVoice) {
+    selectedVoice = voices.find(v => v.name === DESIRED_VOICE_NAME) || voices[0];
+    console.log(`${TAG}: Selected voice: ${selectedVoice.name}`);
+  }
+  
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.voice = selectedVoice;
+  utterance.lang = selectedVoice.lang || DEFAULT_LANGUAGE;
+  utterance.volume = DEFAULT_VOLUME;
+  utterance.rate = DEFAULT_RATE;
+  utterance.pitch = DEFAULT_PITCH;
+  
+  utterance.onstart = () => {
+    console.log(`${TAG}: ✓ Speech STARTED: "${text}"`);
+  };
+  
+  utterance.onend = () => {
+    console.log(`${TAG}: ✓ Speech ENDED: "${text}"`);
+  };
+  
+  utterance.onerror = (event) => {
+    console.error(`${TAG}: ✗ Speech ERROR: ${event.error}`);
+  };
+  
+  console.log(`${TAG}: Calling speechSynthesis.speak()...`);
+  try {
+    window.speechSynthesis.speak(utterance);
+    console.log(`${TAG}: speechSynthesis.speak() called successfully`);
+  } catch (error) {
+    console.error(`${TAG}: Exception calling speak():`, error);
+  }
+}
+
 // Initialize the extension
 function init() {
   console.log(`${TAG}: Initializing on Copilot Tasks page`);
@@ -416,11 +462,11 @@ function init() {
   // Initialize voices first
   initVoices();
   
-  // Wait a bit for voices to load, then speak "Initialized"
+  // Wait for voices to be fully loaded, then test speech
   setTimeout(() => {
-    console.log(`${TAG}: Speaking "Initialized"`);
-    speak("Initialized", false);
-  }, 1000);
+    console.log(`${TAG}: === ATTEMPTING TO SPEAK "Initialized" ===`);
+    testSpeak("Initialized");
+  }, 2000); // Increased delay to 2 seconds
   
   // TEMPORARILY COMMENTED OUT - DOM monitoring and auto-queueing
   // This is to debug basic speech functionality first
@@ -447,9 +493,9 @@ function init() {
 function onPageLoaded() {
   console.log(`${TAG}: Page fully loaded`);
   setTimeout(() => {
-    console.log(`${TAG}: Speaking "Page Loaded"`);
-    speak("Page Loaded", false);
-  }, 500);
+    console.log(`${TAG}: === ATTEMPTING TO SPEAK "Page Loaded" ===`);
+    testSpeak("Page Loaded");
+  }, 1000); // Increased delay to 1 second
 }
 
 // Start when DOM is ready
