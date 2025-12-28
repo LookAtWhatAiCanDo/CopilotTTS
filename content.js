@@ -13,8 +13,6 @@ let spokenItems = [];
 let currentIndex = -1;
 let isSpeaking = false;
 let selectedVoice = null;
-let autoSpeakEnabled = false; // Requires user interaction to enable
-let userHasInteracted = false; // Track if user has interacted with the page
 
 // Initialize voices
 function initVoices() {
@@ -38,8 +36,10 @@ function speak(text) {
     return;
   }
 
-  // Stop any current speech
-  window.speechSynthesis.cancel();
+  // Only cancel if something is actually speaking
+  if (window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+  }
 
   const utterance = new SpeechSynthesisUtterance(text);
   if (selectedVoice) {
@@ -63,6 +63,14 @@ function speak(text) {
   utterance.onerror = (event) => {
     isSpeaking = false;
     console.error(`${TAG}: Speech error: ${event.error}`);
+    
+    // Log additional context for debugging
+    console.error(`${TAG}: Speech error details:`, {
+      error: event.error,
+      voiceSelected: selectedVoice ? selectedVoice.name : 'none',
+      voicesAvailable: window.speechSynthesis.getVoices().length,
+      textLength: text.length
+    });
   };
 
   window.speechSynthesis.speak(utterance);
@@ -87,12 +95,19 @@ function addSpokenItem(text, element) {
     currentIndex = spokenItems.length - 1;
     console.log(`${TAG}: Found new text to speak (${spokenItems.length}):`, text.substring(0, 100));
     
-    // Only auto-speak if enabled and user has interacted
-    if (autoSpeakEnabled && userHasInteracted) {
-      speak(text);
+    // Ensure voices are loaded before speaking
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) {
+      console.log(`${TAG}: Voices not loaded yet, will speak when ready`);
+      // Wait for voices to load, then speak
+      window.speechSynthesis.onvoiceschanged = () => {
+        console.log(`${TAG}: Voices loaded, now speaking`);
+        speak(text);
+      };
     } else {
-      console.log(`${TAG}: Text queued (auto-speak disabled or awaiting user interaction)`);
+      speak(text);
     }
+    
     return true;
   }
   return false;
@@ -289,9 +304,6 @@ function monitorTaskChat() {
 // Handle messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log(`${TAG}: Received message:`, message);
-  
-  // Mark that user has interacted (via popup controls)
-  userHasInteracted = true;
 
   switch (message.action) {
     case 'previous':
@@ -321,26 +333,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       isSpeaking = false;
       sendResponse({ success: true });
       break;
-    
-    case 'enableAutoSpeak':
-      autoSpeakEnabled = true;
-      console.log(`${TAG}: Auto-speak enabled`);
-      sendResponse({ success: true });
-      break;
-    
-    case 'disableAutoSpeak':
-      autoSpeakEnabled = false;
-      console.log(`${TAG}: Auto-speak disabled`);
-      sendResponse({ success: true });
-      break;
 
     case 'getStatus':
       sendResponse({
         success: true,
         currentIndex: currentIndex,
         total: spokenItems.length,
-        isSpeaking: isSpeaking,
-        autoSpeakEnabled: autoSpeakEnabled
+        isSpeaking: isSpeaking
       });
       break;
 
