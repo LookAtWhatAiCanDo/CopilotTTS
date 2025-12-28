@@ -432,20 +432,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case 'next':
-      // Skip current item and continue with queue
+      // Skip current item and go to next
       window.speechSynthesis.cancel();
+      speechQueue = []; // Clear the queue to avoid speaking skipped items
       isProcessingQueue = false;
       isPaused = false;
       
-      if (speechQueue.length > 0 || currentSpeakingIndex < spokenItems.length - 1) {
-        // Continue with queue or next item
-        if (speechQueue.length > 0) {
-          processNextInQueue();
-        } else if (currentSpeakingIndex < spokenItems.length - 1) {
-          currentSpeakingIndex++;
-          const item = spokenItems[currentSpeakingIndex];
-          speak(item.text, false);
-        }
+      if (currentSpeakingIndex < spokenItems.length - 1) {
+        // Go to next item
+        currentSpeakingIndex++;
+        const item = spokenItems[currentSpeakingIndex];
+        speak(item.text, false);
         sendResponse({ success: true, currentIndex: currentSpeakingIndex, total: spokenItems.length, isPaused: false });
       } else {
         sendResponse({ success: false, message: 'No more items' });
