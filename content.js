@@ -202,11 +202,14 @@ function processSessionContainer(sessionContainer) {
   //console.log(`${TAG}: Session container classes:`, sessionContainer.className);
   //console.log(`${TAG}: Session container children count:`, sessionContainer.children.length);
   
-  // Find markdown containers only within SessionLogs-module__markdownWrapper (Copilot responses)
+  // Find markdown containers in two locations:
+  // 1. Within SessionLogs-module__markdownWrapper (Copilot responses)
+  // 2. Within CopilotMessage-module__container (Copilot messages)
   // Exclude markdown containers inside Tool-module__detailsContainer (tool logs)
-  const sessionLogsWrappers = sessionContainer.querySelectorAll('[class*="SessionLogs-module__markdownWrapper--"]');
   const markdownContainers = [];
   
+  // Find markdown in SessionLogs-module__markdownWrapper
+  const sessionLogsWrappers = sessionContainer.querySelectorAll('[class*="SessionLogs-module__markdownWrapper--"]');
   sessionLogsWrappers.forEach(wrapper => {
     // Get markdown containers directly within this wrapper
     const markdownsInWrapper = wrapper.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
@@ -215,6 +218,27 @@ function processSessionContainer(sessionContainer) {
       let parent = container.parentElement;
       let isInsideTool = false;
       while (parent && parent !== wrapper) {
+        if (parent.className && parent.className.includes('Tool-module__detailsContainer')) {
+          isInsideTool = true;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if (!isInsideTool) {
+        markdownContainers.push(container);
+      }
+    });
+  });
+  
+  // Find markdown in CopilotMessage-module__container
+  const copilotMessages = sessionContainer.querySelectorAll('[class*="CopilotMessage-module__container--"]');
+  copilotMessages.forEach(messageContainer => {
+    const markdownsInMessage = messageContainer.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
+    markdownsInMessage.forEach(container => {
+      // Verify this container is not inside a Tool-module__detailsContainer
+      let parent = container.parentElement;
+      let isInsideTool = false;
+      while (parent && parent !== messageContainer) {
         if (parent.className && parent.className.includes('Tool-module__detailsContainer')) {
           isInsideTool = true;
           break;
