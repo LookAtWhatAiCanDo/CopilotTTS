@@ -25,7 +25,27 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     utterance.onerror = function(event) {
-      statusDiv.textContent = 'Error: ' + event.error;
+      let errorMessage = 'Error occurred';
+      
+      // Provide user-friendly error messages
+      switch(event.error) {
+        case 'not-allowed':
+          errorMessage = 'Speech not allowed';
+          break;
+        case 'network':
+          errorMessage = 'Network error';
+          break;
+        case 'synthesis-unavailable':
+          errorMessage = 'Speech unavailable';
+          break;
+        case 'synthesis-failed':
+          errorMessage = 'Speech failed';
+          break;
+        default:
+          errorMessage = 'Speech error';
+      }
+      
+      statusDiv.textContent = errorMessage;
       helloButton.disabled = false;
     };
     
