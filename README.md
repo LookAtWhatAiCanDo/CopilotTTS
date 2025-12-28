@@ -5,8 +5,8 @@ A Chrome browser extension that monitors GitHub Copilot Tasks pages and speaks t
 ## Features
 
 - Automatically monitors `https://github.com/copilot/tasks/*` pages
-- Speaks markdown content from Copilot's responses as they appear
-- Navigation controls to skip to previous/next items
+- Detects and tracks markdown content from Copilot's responses as they appear
+- Navigation controls to skip to previous/next items and hear them spoken
 - Stop button to halt speaking
 - Visual status feedback showing current item position
 
@@ -18,7 +18,7 @@ The extension monitors the DOM of GitHub Copilot Tasks pages for:
 3. All `markdown-body MarkdownRenderer-module__container--*` paragraphs within each session
 4. New sessions and paragraphs added dynamically as the conversation progresses
 
-When new text content is detected, it automatically speaks it using the Web Speech API.
+When new text content is detected, it is tracked and can be spoken using the navigation controls.
 
 ## Installation
 
@@ -32,13 +32,14 @@ When new text content is detected, it automatically speaks it using the Web Spee
 ## Usage
 
 1. Navigate to a GitHub Copilot Tasks page (`https://github.com/copilot/tasks/*`)
-2. The extension will automatically start monitoring for new content
-3. As Copilot responds, the text will be spoken aloud
-4. Click the extension icon to access controls:
-   - **⏮ Prev**: Go back to the previous item and speak it again
+2. The extension will automatically start monitoring and tracking new content
+3. Click the extension icon to access controls:
+   - **⏮ Prev**: Go back to the previous item and speak it
    - **⏹ Stop**: Stop speaking immediately
    - **Next ⏭**: Skip to the next item and speak it
-5. The status shows your current position (e.g., "Item 3 of 10")
+4. The status shows your current position (e.g., "Item 3 of 10")
+
+**Note:** Due to Chrome API limitations with automatic speech in content scripts, the extension operates in "manual mode" - content is detected automatically but you must use the Previous/Next buttons to hear it spoken. This ensures reliable speech synthesis triggered by user interaction.
 
 ## File Structure
 
@@ -65,8 +66,8 @@ CopilotTTS/
 ## Development
 
 The extension consists of:
-- **Content Script** (`content.js`): Injected into Copilot Tasks pages to monitor DOM and speak text
-- **Popup** (`popup.html`, `popup.js`): User interface for navigation controls
+- **Content Script** (`content.js`): Injected into Copilot Tasks pages to monitor DOM and track text
+- **Popup** (`popup.html`, `popup.js`): User interface for navigation controls and speech synthesis
 - **Manifest** (`manifest.json`): Extension configuration with proper permissions and content script injection
 
 ## License

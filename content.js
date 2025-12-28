@@ -15,6 +15,7 @@ let isSpeaking = false;
 let selectedVoice = null;
 let speechQueue = []; // Queue for items to speak
 let isProcessingQueue = false; // Flag to prevent concurrent queue processing
+let autoSpeakEnabled = false; // Disable auto-speak by default due to Chrome API limitations
 
 // Initialize voices
 function initVoices() {
@@ -152,8 +153,13 @@ function addSpokenItem(text, element) {
     currentIndex = spokenItems.length - 1;
     console.log(`${TAG}: Found new text to speak (${spokenItems.length}):`, text.substring(0, 100));
     
-    // Queue the text for speaking instead of speaking immediately
-    queueSpeech(text);
+    // Only queue for speech if auto-speak is enabled
+    // Otherwise, items are tracked but not automatically spoken
+    if (autoSpeakEnabled) {
+      queueSpeech(text);
+    } else {
+      console.log(`${TAG}: Auto-speak disabled - use Previous/Next buttons to hear content`);
+    }
     
     return true;
   }
@@ -403,6 +409,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Initialize the extension
 function init() {
   console.log(`${TAG}: Initializing on Copilot Tasks page`);
+  console.log(`${TAG}: Auto-speak is DISABLED by default due to Chrome API limitations`);
+  console.log(`${TAG}: Use the Previous/Next buttons in the extension popup to hear content`);
   
   // Initialize voices
   initVoices();
