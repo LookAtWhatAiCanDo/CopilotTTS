@@ -470,15 +470,23 @@ function onFirstUserInteraction() {
   document.removeEventListener('click', onFirstUserInteraction);
   document.removeEventListener('keydown', onFirstUserInteraction);
   
-  // Speak all pending items
+  // Speak all pending items immediately (synchronously in the user event handler)
   if (pendingSpeech.length > 0) {
     console.log(`${TAG}: Speaking ${pendingSpeech.length} pending item(s)`);
-    pendingSpeech.forEach((text, index) => {
+    // Speak the first item immediately
+    const firstText = pendingSpeech[0];
+    console.log(`${TAG}: === ATTEMPTING TO SPEAK "${firstText}" ===`);
+    testSpeak(firstText);
+    
+    // Queue remaining items (if any) with short delays
+    // These will work because the first call established the user gesture context
+    for (let i = 1; i < pendingSpeech.length; i++) {
+      const text = pendingSpeech[i];
       setTimeout(() => {
         console.log(`${TAG}: === ATTEMPTING TO SPEAK "${text}" ===`);
         testSpeak(text);
-      }, index * 100); // Small delay between items
-    });
+      }, i * 2000); // 2 second delay between items to ensure first finishes
+    }
     pendingSpeech = [];
   }
 }
