@@ -3,9 +3,23 @@
 document.addEventListener('DOMContentLoaded', function() {
   const helloButton = document.getElementById('helloButton');
   const statusDiv = document.getElementById('status');
+  let statusResetTimeout = null;
+
+  // Check if Web Speech API is supported
+  if (!('speechSynthesis' in window)) {
+    statusDiv.textContent = 'Speech API not supported';
+    helloButton.disabled = true;
+    return;
+  }
 
   // Add click event listener to the hello button
   helloButton.addEventListener('click', function() {
+    // Clear any pending status reset
+    if (statusResetTimeout) {
+      clearTimeout(statusResetTimeout);
+      statusResetTimeout = null;
+    }
+
     // Use Web Speech API to speak "Hello World"
     const utterance = new SpeechSynthesisUtterance('Hello World!');
     
@@ -19,8 +33,9 @@ document.addEventListener('DOMContentLoaded', function() {
       helloButton.disabled = false;
       
       // Reset status after 2 seconds
-      setTimeout(function() {
+      statusResetTimeout = setTimeout(function() {
         statusDiv.textContent = 'Ready';
+        statusResetTimeout = null;
       }, 2000);
     };
     
@@ -47,6 +62,12 @@ document.addEventListener('DOMContentLoaded', function() {
       
       statusDiv.textContent = errorMessage;
       helloButton.disabled = false;
+      
+      // Clear any pending status reset
+      if (statusResetTimeout) {
+        clearTimeout(statusResetTimeout);
+        statusResetTimeout = null;
+      }
     };
     
     // Speak the text
