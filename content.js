@@ -184,14 +184,13 @@ function addSpokenItem(text, element) {
   return false;
 }
 
-// Process a markdown container and extract paragraphs
+// Process a markdown container and extract all inner text
 function processMarkdownContainer(container) {
-  const paragraphs = container.querySelectorAll('p');
-  //console.log(`${TAG}: Found ${paragraphs.length} paragraph(s) in markdown container`);
-  paragraphs.forEach(p => {
-    const text = extractTextFromElement(p);
-    addSpokenItem(text, p);
-  });
+  // Extract all text content from the markdown container (not just <p> blocks)
+  const text = extractTextFromElement(container);
+  if (text) {
+    addSpokenItem(text, container);
+  }
 }
 
 // Process a session details container
