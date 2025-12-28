@@ -119,12 +119,31 @@ function processSessionContainer(sessionContainer) {
     const markdownBodyElements = sessionContainer.querySelectorAll('.markdown-body');
     console.log(`${TAG}: Elements with markdown-body class:`, markdownBodyElements.length);
     
-    // Check for any MarkdownRenderer
+    // Check for SessionLogs wrappers
+    const sessionLogsWrappers = sessionContainer.querySelectorAll('[class*="SessionLogs-module__markdownWrapper--"]');
+    console.log(`${TAG}: SessionLogs wrappers found:`, sessionLogsWrappers.length);
+    
+    // Check each wrapper
+    sessionLogsWrappers.forEach((wrapper, i) => {
+      console.log(`${TAG}: Wrapper ${i} innerHTML length:`, wrapper.innerHTML.length);
+      console.log(`${TAG}: Wrapper ${i} children:`, wrapper.children.length);
+      const markdownInWrapper = wrapper.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
+      console.log(`${TAG}: Markdown containers in wrapper ${i}:`, markdownInWrapper.length);
+    });
+    
+    // Check for any MarkdownRenderer in all divs
     Array.from(allDivs).forEach((div, i) => {
       if (div.className && div.className.includes('MarkdownRenderer')) {
-        console.log(`${TAG}: Found MarkdownRenderer element [${i}]:`, div.className);
+        console.log(`${TAG}: Found MarkdownRenderer element [${i}]:`, div.className, div);
       }
     });
+    
+    // Check if session is expanded
+    const contentContainer = sessionContainer.querySelector('[class*="Session-module__contentContainer--"]');
+    if (contentContainer) {
+      const isExpanded = contentContainer.getAttribute('data-expanded');
+      console.log(`${TAG}: Session content container data-expanded:`, isExpanded);
+    }
   }
   
   markdownContainers.forEach(container => {
@@ -134,6 +153,38 @@ function processSessionContainer(sessionContainer) {
     // Set up observer for new paragraphs in this container
     observeMarkdownContainer(container);
   });
+  
+  // Set up observer on the session container to watch for dynamically loaded content
+  const contentObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          // Check if this node or its children contain markdown containers
+          let newMarkdownContainers = [];
+          if (node.matches && node.matches('[class*="MarkdownRenderer-module__container--"]')) {
+            newMarkdownContainers.push(node);
+          }
+          const childMarkdown = node.querySelectorAll ? node.querySelectorAll('[class*="MarkdownRenderer-module__container--"]') : [];
+          newMarkdownContainers.push(...Array.from(childMarkdown));
+          
+          if (newMarkdownContainers.length > 0) {
+            console.log(`${TAG}: Found ${newMarkdownContainers.length} new markdown container(s) added to session`);
+            newMarkdownContainers.forEach(container => {
+              processMarkdownContainer(container);
+              observeMarkdownContainer(container);
+            });
+          }
+        }
+      });
+    });
+  });
+  
+  contentObserver.observe(sessionContainer, {
+    childList: true,
+    subtree: true
+  });
+  
+  console.log(`${TAG}: Set up content observer for session container`);
 }
 
 // Observe a markdown container for new paragraphs
