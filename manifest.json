@@ -2,7 +2,8 @@
   "manifest_version": 3,
   "name": "Copilot Text To Speech",
   "version": "1.0.0",
-  "description": "A Chrome extension for text-to-speech functionality",
+  "description": "A browser extension to make GitHub Copilot speak",
+  "author": "LookAtWhatAiCanDo",
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
