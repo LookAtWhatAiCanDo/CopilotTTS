@@ -263,7 +263,7 @@ function processSessionContainer(sessionContainer) {
     subtree: true
   });
   
-  //console.log(`${TAG}: Set up content observer for session container`);
+  console.log(`${TAG}: Set up content observer for session container`);
 }
 
 // Observe a markdown container for new paragraphs
@@ -300,7 +300,7 @@ function observeMarkdownContainer(container) {
     subtree: true
   });
 
-  //console.log(`${TAG}: Observing markdown container for new paragraphs`);
+  console.log(`${TAG}: Observing markdown container for new paragraphs`);
 }
 
 // Find and monitor the main TaskChat container
@@ -353,7 +353,7 @@ function monitorTaskChat() {
     subtree: true
   });
 
-  //console.log(`${TAG}: Monitoring TaskChat for new sessions`);
+  console.log(`${TAG}: Monitoring TaskChat for new sessions`);
   return true;
 }
 
