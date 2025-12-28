@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const previousButton = document.getElementById('previousButton');
   const nextButton = document.getElementById('nextButton');
   const stopButton = document.getElementById('stopButton');
+  const autoSpeakToggle = document.getElementById('autoSpeakToggle');
   const statusDiv = document.getElementById('status');
 
   // Helper function to send message to content script
@@ -58,6 +59,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const current = response.currentIndex + 1;
         statusDiv.textContent = `Item ${current} of ${response.total}`;
       }
+      // Update toggle state
+      if (response.autoSpeakEnabled !== undefined) {
+        autoSpeakToggle.checked = response.autoSpeakEnabled;
+      }
     }
   }
 
@@ -86,6 +91,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Refresh status after a short delay
     setTimeout(refreshStatus, 100);
+  });
+  
+  // Auto-speak toggle handler
+  autoSpeakToggle.addEventListener('change', async function() {
+    const action = autoSpeakToggle.checked ? 'enableAutoSpeak' : 'disableAutoSpeak';
+    const response = await sendMessageToActiveTab({ action: action });
+    if (response && response.success) {
+      console.log(`${TAG}: Auto-speak ${autoSpeakToggle.checked ? 'enabled' : 'disabled'}`);
+    }
   });
 
   // Initial status check

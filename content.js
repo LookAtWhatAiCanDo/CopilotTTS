@@ -13,6 +13,8 @@ let spokenItems = [];
 let currentIndex = -1;
 let isSpeaking = false;
 let selectedVoice = null;
+let autoSpeakEnabled = false; // Requires user interaction to enable
+let userHasInteracted = false; // Track if user has interacted with the page
 
 // Initialize voices
 function initVoices() {
@@ -84,7 +86,13 @@ function addSpokenItem(text, element) {
     spokenItems.push(item);
     currentIndex = spokenItems.length - 1;
     console.log(`${TAG}: Found new text to speak (${spokenItems.length}):`, text.substring(0, 100));
-    speak(text);
+    
+    // Only auto-speak if enabled and user has interacted
+    if (autoSpeakEnabled && userHasInteracted) {
+      speak(text);
+    } else {
+      console.log(`${TAG}: Text queued (auto-speak disabled or awaiting user interaction)`);
+    }
     return true;
   }
   return false;
@@ -281,6 +289,9 @@ function monitorTaskChat() {
 // Handle messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log(`${TAG}: Received message:`, message);
+  
+  // Mark that user has interacted (via popup controls)
+  userHasInteracted = true;
 
   switch (message.action) {
     case 'previous':
@@ -310,13 +321,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       isSpeaking = false;
       sendResponse({ success: true });
       break;
+    
+    case 'enableAutoSpeak':
+      autoSpeakEnabled = true;
+      console.log(`${TAG}: Auto-speak enabled`);
+      sendResponse({ success: true });
+      break;
+    
+    case 'disableAutoSpeak':
+      autoSpeakEnabled = false;
+      console.log(`${TAG}: Auto-speak disabled`);
+      sendResponse({ success: true });
+      break;
 
     case 'getStatus':
       sendResponse({
         success: true,
         currentIndex: currentIndex,
         total: spokenItems.length,
-        isSpeaking: isSpeaking
+        isSpeaking: isSpeaking,
+        autoSpeakEnabled: autoSpeakEnabled
       });
       break;
 
