@@ -451,6 +451,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Go back one item
         currentSpeakingIndex--;
         const item = spokenItems[currentSpeakingIndex];
+        
+        // Rebuild queue with remaining items (from current to end)
+        for (let i = currentSpeakingIndex + 1; i < spokenItems.length; i++) {
+          speechQueue.push(spokenItems[i].text);
+        }
+        
         speak(item.text, false);
         sendResponse({ success: true, currentIndex: currentSpeakingIndex, total: spokenItems.length, isPaused: false });
       } else {
@@ -459,9 +465,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case 'next':
-      // Skip current item and go to next
+      // Cancel current speech and clear queue
       window.speechSynthesis.cancel();
-      speechQueue = []; // Clear the queue to avoid speaking skipped items
+      speechQueue = [];
       isProcessingQueue = false;
       isPaused = false;
       
@@ -469,6 +475,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Go to next item
         currentSpeakingIndex++;
         const item = spokenItems[currentSpeakingIndex];
+        
+        // Rebuild queue with remaining items (from current+1 to end)
+        for (let i = currentSpeakingIndex + 1; i < spokenItems.length; i++) {
+          speechQueue.push(spokenItems[i].text);
+        }
+        
         speak(item.text, false);
         sendResponse({ success: true, currentIndex: currentSpeakingIndex, total: spokenItems.length, isPaused: false });
       } else {
@@ -478,9 +490,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'stop':
       if (isPaused) {
-        // Resume playback
+        // Resume playback - start processing the queue
         isPaused = false;
         console.log(`${TAG}: Resuming playback`);
+        
+        // If queue is empty but we have more items, rebuild it
+        if (speechQueue.length === 0 && currentSpeakingIndex < spokenItems.length - 1) {
+          for (let i = currentSpeakingIndex + 1; i < spokenItems.length; i++) {
+            speechQueue.push(spokenItems[i].text);
+          }
+          console.log(`${TAG}: Rebuilt queue with ${speechQueue.length} items`);
+        }
+        
         processNextInQueue();
         sendResponse({ success: true, isPaused: false });
       } else {
@@ -506,10 +527,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case 'testSpeak':
-      // Test speech by speaking a simple phrase
+      // Test speech by speaking a simple phrase using regular speak function
       const testText = 'This is a test of the text to speech system.';
       console.log(`${TAG}: Test speak requested from popup`);
-      testSpeak(testText); // Call testSpeak directly (has user gesture from button click)
+      
+      // Cancel any current speech and clear queue
+      window.speechSynthesis.cancel();
+      speechQueue = [];
+      isProcessingQueue = false;
+      
+      // Speak test text directly (has user gesture from button click)
+      speak(testText, false);
       sendResponse({ success: true, message: 'Test speech initiated' });
       break;
 
@@ -540,7 +568,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Jump to the target item
         currentSpeakingIndex = targetIndex;
         const item = spokenItems[currentSpeakingIndex];
-        console.log(`${TAG}: Jumping to item ${currentSpeakingIndex + 1} of ${spokenItems.length}`);
+        
+        // Rebuild queue with remaining items (from current+1 to end)
+        for (let i = currentSpeakingIndex + 1; i < spokenItems.length; i++) {
+          speechQueue.push(spokenItems[i].text);
+        }
+        
+        console.log(`${TAG}: Jumping to item ${currentSpeakingIndex + 1} of ${spokenItems.length} (${speechQueue.length} items queued after this)`);
         speak(item.text, false);
         sendResponse({ success: true, currentIndex: currentSpeakingIndex, total: spokenItems.length, isPaused: false });
       } else {
@@ -555,58 +589,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return true; // Keep message channel open for async response
 });
-
-// Test speech function that doesn't use queue
-function testSpeak(text) {
-  console.log(`${TAG}: TEST SPEAK called with: "${text}"`);
-  
-  // Ensure voices are loaded
-  const voices = window.speechSynthesis.getVoices();
-  console.log(`${TAG}: Available voices: ${voices.length}`);
-  
-  if (voices.length === 0) {
-    console.error(`${TAG}: No voices available yet!`);
-    return;
-  }
-  
-  if (!selectedVoice) {
-    selectedVoice = voices.find(v => v.name === DESIRED_VOICE_NAME) || voices[0];
-  }
-  
-  // Always log the selected voice
-  console.log(`${TAG}: Using voice: ${selectedVoice.name} (lang: ${selectedVoice.lang}, localService: ${selectedVoice.localService}, default: ${selectedVoice.default})`);
-  
-  // Verify voice is in the available voices
-  const voiceExists = voices.some(v => v.name === selectedVoice.name);
-  console.log(`${TAG}: Voice verified in available voices: ${voiceExists}`);
-  
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.voice = selectedVoice;
-  utterance.lang = selectedVoice.lang || DEFAULT_LANGUAGE;
-  utterance.volume = DEFAULT_VOLUME;
-  utterance.rate = DEFAULT_RATE;
-  utterance.pitch = DEFAULT_PITCH;
-  
-  utterance.onstart = () => {
-    console.log(`${TAG}: ✓ Speech STARTED: "${text}"`);
-  };
-  
-  utterance.onend = () => {
-    console.log(`${TAG}: ✓ Speech ENDED: "${text}"`);
-  };
-  
-  utterance.onerror = (event) => {
-    console.error(`${TAG}: ✗ Speech ERROR: ${event.error}`);
-  };
-  
-  console.log(`${TAG}: Calling speechSynthesis.speak()...`);
-  try {
-    window.speechSynthesis.speak(utterance);
-    console.log(`${TAG}: speechSynthesis.speak() called successfully`);
-  } catch (error) {
-    console.error(`${TAG}: Exception calling speak():`, error);
-  }
-}
 
 // Track if user has interacted
 let userHasInteracted = false;
@@ -701,11 +683,4 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
-}
-
-// Speak when page is fully loaded
-if (document.readyState === 'complete') {
-  onPageLoaded();
-} else {
-  window.addEventListener('load', onPageLoaded);
 }
