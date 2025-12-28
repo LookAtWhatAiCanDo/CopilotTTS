@@ -455,6 +455,45 @@ function testSpeak(text) {
   }
 }
 
+// Track if user has interacted
+let userHasInteracted = false;
+let pendingSpeech = [];
+
+// Function to handle first user interaction
+function onFirstUserInteraction() {
+  if (userHasInteracted) return;
+  
+  console.log(`${TAG}: ✓ User interaction detected - enabling speech`);
+  userHasInteracted = true;
+  
+  // Remove listeners as we only need this once
+  document.removeEventListener('click', onFirstUserInteraction);
+  document.removeEventListener('keydown', onFirstUserInteraction);
+  
+  // Speak all pending items
+  if (pendingSpeech.length > 0) {
+    console.log(`${TAG}: Speaking ${pendingSpeech.length} pending item(s)`);
+    pendingSpeech.forEach((text, index) => {
+      setTimeout(() => {
+        console.log(`${TAG}: === ATTEMPTING TO SPEAK "${text}" ===`);
+        testSpeak(text);
+      }, index * 100); // Small delay between items
+    });
+    pendingSpeech = [];
+  }
+}
+
+// Function to speak or queue speech
+function speakOrQueue(text) {
+  if (userHasInteracted) {
+    console.log(`${TAG}: === ATTEMPTING TO SPEAK "${text}" ===`);
+    testSpeak(text);
+  } else {
+    console.log(`${TAG}: Queueing "${text}" - waiting for user interaction (click/key press)`);
+    pendingSpeech.push(text);
+  }
+}
+
 // Initialize the extension
 function init() {
   console.log(`${TAG}: Initializing on Copilot Tasks page`);
@@ -462,10 +501,15 @@ function init() {
   // Initialize voices first
   initVoices();
   
-  // Wait for voices to be fully loaded, then test speech
+  // Listen for first user interaction
+  document.addEventListener('click', onFirstUserInteraction);
+  document.addEventListener('keydown', onFirstUserInteraction);
+  console.log(`${TAG}: ⚠️  Waiting for user interaction (click or key press) to enable speech...`);
+  console.log(`${TAG}: ⚠️  Speech is queued and will play automatically after you click anywhere on the page`);
+  
+  // Wait for voices to be fully loaded, then queue test speech
   setTimeout(() => {
-    console.log(`${TAG}: === ATTEMPTING TO SPEAK "Initialized" ===`);
-    testSpeak("Initialized");
+    speakOrQueue("Initialized");
   }, 2000); // Increased delay to 2 seconds
   
   // TEMPORARILY COMMENTED OUT - DOM monitoring and auto-queueing
@@ -493,8 +537,7 @@ function init() {
 function onPageLoaded() {
   console.log(`${TAG}: Page fully loaded`);
   setTimeout(() => {
-    console.log(`${TAG}: === ATTEMPTING TO SPEAK "Page Loaded" ===`);
-    testSpeak("Page Loaded");
+    speakOrQueue("Page Loaded");
   }, 1000); // Increased delay to 1 second
 }
 
