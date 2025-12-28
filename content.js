@@ -11,7 +11,9 @@ const DEFAULT_PITCH = 1;
 // State management
 let spokenItems = [];
 let currentIndex = -1;
+let currentSpeakingIndex = -1; // Track which item is currently being spoken
 let isSpeaking = false;
+let isPaused = false; // Track whether playback is paused
 let selectedVoice = null;
 let speechQueue = []; // Queue for items to speak
 let isProcessingQueue = false; // Flag to prevent concurrent queue processing
@@ -72,14 +74,21 @@ function speak(text, cancelPrevious = false) {
 
   utterance.onstart = () => {
     isSpeaking = true;
-    console.log(`${TAG}: Speaking: "${text.substring(0, 50)}..."`);
+    // Find the index of the currently speaking item
+    const speakingItem = spokenItems.find(item => item.text === text);
+    if (speakingItem) {
+      currentSpeakingIndex = spokenItems.indexOf(speakingItem);
+    }
+    console.log(`${TAG}: ✓ Speech STARTED: "${text.substring(0, 50)}..."`);
   };
 
   utterance.onend = () => {
     isSpeaking = false;
-    console.log(`${TAG}: Finished speaking`);
-    // Process next item in queue after a small delay
-    setTimeout(processNextInQueue, 100);
+    console.log(`${TAG}: ✓ Speech ENDED: "${text.substring(0, 50)}..."`);
+    // Process next item in queue after a small delay, unless paused
+    if (!isPaused) {
+      setTimeout(processNextInQueue, 2000); // 2 second delay between items
+    }
   };
 
   utterance.onerror = (event) => {
@@ -108,7 +117,7 @@ function speak(text, cancelPrevious = false) {
 
 // Process the next item in the speech queue
 function processNextInQueue() {
-  if (isProcessingQueue || speechQueue.length === 0) {
+  if (isPaused || isProcessingQueue || speechQueue.length === 0) {
     isProcessingQueue = false;
     return;
   }
@@ -164,7 +173,7 @@ function addSpokenItem(text, element) {
       timestamp: Date.now()
     };
     spokenItems.push(item);
-    currentIndex = spokenItems.length - 1;
+    // Don't update currentIndex here - it will be set when speech actually starts
     console.log(`${TAG}: Found new text to speak (${spokenItems.length}):`, text.substring(0, 100));
     
     // Queue for speech - use speakOrQueue to respect user interaction requirement
@@ -377,41 +386,69 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   switch (message.action) {
     case 'previous':
-      if (currentIndex > 0) {
-        currentIndex--;
-        const item = spokenItems[currentIndex];
-        speak(item.text, true); // Cancel previous speech when navigating
-        sendResponse({ success: true, currentIndex: currentIndex, total: spokenItems.length });
+      if (currentSpeakingIndex > 0) {
+        // Cancel current speech and clear queue
+        window.speechSynthesis.cancel();
+        speechQueue = [];
+        isProcessingQueue = false;
+        isPaused = false;
+        
+        // Go back one item
+        currentSpeakingIndex--;
+        const item = spokenItems[currentSpeakingIndex];
+        speak(item.text, false);
+        sendResponse({ success: true, currentIndex: currentSpeakingIndex, total: spokenItems.length, isPaused: false });
       } else {
         sendResponse({ success: false, message: 'Already at first item' });
       }
       break;
 
     case 'next':
-      if (currentIndex < spokenItems.length - 1) {
-        currentIndex++;
-        const item = spokenItems[currentIndex];
-        speak(item.text, true); // Cancel previous speech when navigating
-        sendResponse({ success: true, currentIndex: currentIndex, total: spokenItems.length });
+      // Skip current item and continue with queue
+      window.speechSynthesis.cancel();
+      isProcessingQueue = false;
+      isPaused = false;
+      
+      if (speechQueue.length > 0 || currentSpeakingIndex < spokenItems.length - 1) {
+        // Continue with queue or next item
+        if (speechQueue.length > 0) {
+          processNextInQueue();
+        } else if (currentSpeakingIndex < spokenItems.length - 1) {
+          currentSpeakingIndex++;
+          const item = spokenItems[currentSpeakingIndex];
+          speak(item.text, false);
+        }
+        sendResponse({ success: true, currentIndex: currentSpeakingIndex, total: spokenItems.length, isPaused: false });
       } else {
-        sendResponse({ success: false, message: 'Already at last item' });
+        sendResponse({ success: false, message: 'No more items' });
       }
       break;
 
     case 'stop':
-      window.speechSynthesis.cancel();
-      speechQueue = []; // Clear the queue
-      isProcessingQueue = false;
-      isSpeaking = false;
-      sendResponse({ success: true });
+      if (isPaused) {
+        // Resume playback
+        isPaused = false;
+        console.log(`${TAG}: Resuming playback`);
+        processNextInQueue();
+        sendResponse({ success: true, isPaused: false });
+      } else {
+        // Pause playback
+        window.speechSynthesis.cancel();
+        isProcessingQueue = false;
+        isSpeaking = false;
+        isPaused = true;
+        console.log(`${TAG}: Paused playback (${speechQueue.length} items in queue)`);
+        sendResponse({ success: true, isPaused: true });
+      }
       break;
 
     case 'getStatus':
       sendResponse({
         success: true,
-        currentIndex: currentIndex,
+        currentIndex: currentSpeakingIndex,
         total: spokenItems.length,
         isSpeaking: isSpeaking,
+        isPaused: isPaused,
         queueLength: speechQueue.length
       });
       break;

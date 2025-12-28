@@ -42,11 +42,29 @@ document.addEventListener('DOMContentLoaded', function() {
   // Update status display
   function updateStatus(response) {
     if (response && response.success) {
-      if (response.total !== undefined) {
-        const current = response.currentIndex + 1;
-        statusDiv.textContent = `Item ${current} of ${response.total}`;
+      if (response.isPaused !== undefined && response.isPaused) {
+        // Update stop button to show resume
+        stopButton.textContent = '▶ Resume';
+        if (response.currentIndex >= 0 && response.total > 0) {
+          statusDiv.textContent = `Paused - Item ${response.currentIndex + 1} of ${response.total}`;
+        } else {
+          statusDiv.textContent = 'Paused';
+        }
       } else {
-        statusDiv.textContent = 'Stopped';
+        // Update stop button to show pause/stop
+        stopButton.textContent = '⏹ Stop';
+        if (response.total !== undefined) {
+          if (response.currentIndex >= 0) {
+            const current = response.currentIndex + 1;
+            statusDiv.textContent = `Item ${current} of ${response.total}`;
+          } else if (response.total === 0) {
+            statusDiv.textContent = 'No items';
+          } else {
+            statusDiv.textContent = 'Ready';
+          }
+        } else {
+          statusDiv.textContent = 'Ready';
+        }
       }
     } else if (response && response.message) {
       statusDiv.textContent = response.message;
@@ -57,11 +75,26 @@ document.addEventListener('DOMContentLoaded', function() {
   async function refreshStatus() {
     const response = await sendMessageToActiveTab({ action: 'getStatus' });
     if (response && response.success) {
-      if (response.total === 0) {
-        statusDiv.textContent = 'No items yet';
+      // Update stop button based on pause state
+      if (response.isPaused) {
+        stopButton.textContent = '▶ Resume';
+        if (response.currentIndex >= 0 && response.total > 0) {
+          statusDiv.textContent = `Paused - Item ${response.currentIndex + 1} of ${response.total}`;
+        } else {
+          statusDiv.textContent = 'Paused';
+        }
       } else {
-        const current = response.currentIndex + 1;
-        statusDiv.textContent = `Item ${current} of ${response.total}`;
+        stopButton.textContent = '⏹ Stop';
+        if (response.total === 0) {
+          statusDiv.textContent = 'No items yet';
+        } else if (response.currentIndex >= 0) {
+          const current = response.currentIndex + 1;
+          statusDiv.textContent = `Item ${current} of ${response.total}`;
+        } else if (response.queueLength > 0) {
+          statusDiv.textContent = `Waiting for interaction (${response.queueLength} queued)`;
+        } else {
+          statusDiv.textContent = 'Ready';
+        }
       }
     }
   }
