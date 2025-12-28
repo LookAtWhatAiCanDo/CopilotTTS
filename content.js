@@ -93,6 +93,7 @@ function addSpokenItem(text, element) {
 // Process a markdown container and extract paragraphs
 function processMarkdownContainer(container) {
   const paragraphs = container.querySelectorAll('p');
+  console.log(`${TAG}: Found ${paragraphs.length} paragraph(s) in markdown container`);
   paragraphs.forEach(p => {
     const text = extractTextFromElement(p);
     addSpokenItem(text, p);
@@ -105,6 +106,7 @@ function processSessionContainer(sessionContainer) {
   
   // Find all markdown containers within this session using attribute selector
   const markdownContainers = sessionContainer.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
+  console.log(`${TAG}: Found ${markdownContainers.length} markdown container(s) in session`);
   
   markdownContainers.forEach(container => {
     processMarkdownContainer(container);
@@ -121,6 +123,7 @@ function observeMarkdownContainer(container) {
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
           if (node.tagName === 'P') {
+            console.log(`${TAG}: Found new <p> element`);
             const text = extractTextFromElement(node);
             if (addSpokenItem(text, node)) {
               console.log(`${TAG}: New paragraph detected`);
@@ -128,6 +131,9 @@ function observeMarkdownContainer(container) {
           }
           // Check for nested paragraphs
           const nestedPs = node.querySelectorAll('p');
+          if (nestedPs.length > 0) {
+            console.log(`${TAG}: Found ${nestedPs.length} nested <p> element(s)`);
+          }
           nestedPs.forEach(p => {
             const text = extractTextFromElement(p);
             if (addSpokenItem(text, p)) {
@@ -174,11 +180,15 @@ function monitorTaskChat() {
         if (node.nodeType === Node.ELEMENT_NODE) {
           // Check if this is a session container
           if (node.classList && Array.from(node.classList).some(c => c.includes('Session-module__detailsContainer--'))) {
+            console.log(`${TAG}: Found new session container element`);
             console.log(`${TAG}: New session container detected`);
             processSessionContainer(node);
           }
           // Also check nested session containers
           const nestedSessions = node.querySelectorAll('[class*="Session-module__detailsContainer--"]');
+          if (nestedSessions.length > 0) {
+            console.log(`${TAG}: Found ${nestedSessions.length} nested session container(s)`);
+          }
           nestedSessions.forEach(session => {
             console.log(`${TAG}: New nested session container detected`);
             processSessionContainer(session);
