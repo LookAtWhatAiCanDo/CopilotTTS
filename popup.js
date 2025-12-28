@@ -37,8 +37,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const voices = speechSynthesis.getVoices();
     if (voices.length === 0) {
-      // Voices aren't ready yet; delay until they fire
-      speechSynthesis.onvoiceschanged = () => speak(text, voice, clear);
+      // Voices aren't ready yet; delay until they fire (only once)
+      if (!speechSynthesis.onvoiceschanged) {
+        speechSynthesis.onvoiceschanged = () => {
+          speechSynthesis.onvoiceschanged = null; // Prevent multiple calls
+          speak(text, voice, clear);
+        };
+      }
       return;
     }
 
@@ -55,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.voice = voice;  // use specific voice
-    utterance.lang = 'en-US'; // set language if needed
+    utterance.lang = voice.lang || 'en-GB'; // use voice's language or default to en-GB
     utterance.volume = 1;     // set volume if needed
     utterance.rate = 1;       // set rate if needed
     utterance.pitch = 1;      // set pitch if needed
