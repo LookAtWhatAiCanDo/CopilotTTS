@@ -424,8 +424,14 @@ function testSpeak(text) {
   
   if (!selectedVoice) {
     selectedVoice = voices.find(v => v.name === DESIRED_VOICE_NAME) || voices[0];
-    console.log(`${TAG}: Selected voice: ${selectedVoice.name}`);
   }
+  
+  // Always log the selected voice
+  console.log(`${TAG}: Using voice: ${selectedVoice.name} (lang: ${selectedVoice.lang}, localService: ${selectedVoice.localService}, default: ${selectedVoice.default})`);
+  
+  // Verify voice is in the available voices
+  const voiceExists = voices.some(v => v.name === selectedVoice.name);
+  console.log(`${TAG}: Voice verified in available voices: ${voiceExists}`);
   
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.voice = selectedVoice;
