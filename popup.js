@@ -6,9 +6,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Add click event listener to the hello button
   helloButton.addEventListener('click', function() {
-    // Update status
-    statusDiv.textContent = 'Speaking...';
-    
     // Use Web Speech API to speak "Hello World"
     const utterance = new SpeechSynthesisUtterance('Hello World!');
     
