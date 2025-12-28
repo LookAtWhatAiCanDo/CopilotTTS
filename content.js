@@ -83,7 +83,12 @@ function speak(text, cancelPrevious = false) {
     setTimeout(processNextInQueue, 100);
   };
 
-  window.speechSynthesis.speak(utterance);
+  try {
+    window.speechSynthesis.speak(utterance);
+  } catch (error) {
+    console.error(`${TAG}: Exception when calling speak():`, error);
+    setTimeout(processNextInQueue, 100);
+  }
 }
 
 // Process the next item in the speech queue
@@ -122,8 +127,9 @@ function queueSpeech(text) {
   console.log(`${TAG}: Queued speech (${speechQueue.length} in queue)`);
   
   // Start processing if not already processing
+  // Add a delay before starting to ensure page is ready
   if (!isProcessingQueue && !isSpeaking) {
-    processNextInQueue();
+    setTimeout(processNextInQueue, 500); // 500ms delay before first item
   }
 }
 
