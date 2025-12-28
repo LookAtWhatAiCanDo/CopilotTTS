@@ -1,9 +1,21 @@
 // Popup script for Copilot Text To Speech extension
 
+// Constants
+const HELLO_TEXT = 'Hello World!';
+const STATUS_RESET_DELAY = 2000;
+
 document.addEventListener('DOMContentLoaded', function() {
   const helloButton = document.getElementById('helloButton');
   const statusDiv = document.getElementById('status');
   let statusResetTimeout = null;
+
+  // Helper function to clear pending timeout
+  function clearStatusResetTimeout() {
+    if (statusResetTimeout) {
+      clearTimeout(statusResetTimeout);
+      statusResetTimeout = null;
+    }
+  }
 
   // Check if Web Speech API is supported
   if (!('speechSynthesis' in window)) {
@@ -15,13 +27,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Add click event listener to the hello button
   helloButton.addEventListener('click', function() {
     // Clear any pending status reset
-    if (statusResetTimeout) {
-      clearTimeout(statusResetTimeout);
-      statusResetTimeout = null;
-    }
+    clearStatusResetTimeout();
 
     // Use Web Speech API to speak "Hello World"
-    const utterance = new SpeechSynthesisUtterance('Hello World!');
+    const utterance = new SpeechSynthesisUtterance(HELLO_TEXT);
     
     utterance.onstart = function() {
       statusDiv.textContent = 'Speaking...';
@@ -32,11 +41,11 @@ document.addEventListener('DOMContentLoaded', function() {
       statusDiv.textContent = 'Finished speaking!';
       helloButton.disabled = false;
       
-      // Reset status after 2 seconds
+      // Reset status after delay
       statusResetTimeout = setTimeout(function() {
         statusDiv.textContent = 'Ready';
         statusResetTimeout = null;
-      }, 2000);
+      }, STATUS_RESET_DELAY);
     };
     
     utterance.onerror = function(event) {
@@ -64,10 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
       helloButton.disabled = false;
       
       // Clear any pending status reset
-      if (statusResetTimeout) {
-        clearTimeout(statusResetTimeout);
-        statusResetTimeout = null;
-      }
+      clearStatusResetTimeout();
     };
     
     // Speak the text
