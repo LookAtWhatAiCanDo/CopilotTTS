@@ -30,7 +30,7 @@ function initVoices() {
   }
   
   selectedVoice = voices.find(v => v.name === DESIRED_VOICE_NAME) || voices[0];
-  console.log(`${TAG}: Using voice: ${selectedVoice.name}`);
+  console.log(`${TAG}: initVoices: Using voice: ${selectedVoice.name}`);
 }
 
 // Speak text using Web Speech API
