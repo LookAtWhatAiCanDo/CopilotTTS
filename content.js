@@ -599,17 +599,21 @@ function onFirstUserInteraction() {
   // Speak all pending items using the proper queue system
   if (pendingSpeech.length > 0) {
     console.log(`${TAG}: Speaking ${pendingSpeech.length} pending item(s)`);
-    // Speak the first item immediately (synchronously in the user event handler)
-    const firstText = pendingSpeech.shift();
-    speak(firstText, false);
-    
-    // Add remaining items to the speech queue
-    // They will be processed automatically by the queue system with proper delays
+    // Add all items to the speech queue
     pendingSpeech.forEach(text => {
       speechQueue.push(text);
     });
     console.log(`${TAG}: Added ${speechQueue.length} items to speech queue`);
     pendingSpeech = [];
+    
+    // Start processing the queue immediately (synchronously in the user event handler)
+    // This ensures the first item is spoken right away
+    if (!isProcessingQueue && !isSpeaking && speechQueue.length > 0) {
+      isProcessingQueue = true;
+      const text = speechQueue.shift();
+      console.log(`${TAG}: Processing queue item (${speechQueue.length} remaining)`);
+      speak(text, false);
+    }
   }
 }
 
