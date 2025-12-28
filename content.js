@@ -13,6 +13,8 @@ let spokenItems = [];
 let currentIndex = -1;
 let isSpeaking = false;
 let selectedVoice = null;
+let speechQueue = []; // Queue for items to speak
+let isProcessingQueue = false; // Flag to prevent concurrent queue processing
 
 // Initialize voices
 function initVoices() {
@@ -31,14 +33,17 @@ function initVoices() {
 }
 
 // Speak text using Web Speech API
-function speak(text) {
+function speak(text, cancelPrevious = false) {
   if (!text || text.trim().length === 0) {
     return;
   }
 
-  // Only cancel if something is actually speaking
-  if (window.speechSynthesis.speaking) {
+  // Only cancel if explicitly requested (e.g., user pressed Stop or navigation button)
+  if (cancelPrevious && window.speechSynthesis.speaking) {
     window.speechSynthesis.cancel();
+    // Also clear the queue when canceling
+    speechQueue = [];
+    isProcessingQueue = false;
   }
 
   const utterance = new SpeechSynthesisUtterance(text);
@@ -58,6 +63,8 @@ function speak(text) {
   utterance.onend = () => {
     isSpeaking = false;
     console.log(`${TAG}: Finished speaking`);
+    // Process next item in queue after a small delay
+    setTimeout(processNextInQueue, 100);
   };
 
   utterance.onerror = (event) => {
@@ -71,9 +78,53 @@ function speak(text) {
       voicesAvailable: window.speechSynthesis.getVoices().length,
       textLength: text.length
     });
+    
+    // Continue with queue even on error
+    setTimeout(processNextInQueue, 100);
   };
 
   window.speechSynthesis.speak(utterance);
+}
+
+// Process the next item in the speech queue
+function processNextInQueue() {
+  if (isProcessingQueue || speechQueue.length === 0) {
+    isProcessingQueue = false;
+    return;
+  }
+  
+  isProcessingQueue = true;
+  const text = speechQueue.shift();
+  console.log(`${TAG}: Processing queue item (${speechQueue.length} remaining)`);
+  speak(text, false);
+}
+
+// Add text to speech queue
+function queueSpeech(text) {
+  if (!text || text.trim().length === 0) {
+    return;
+  }
+  
+  // Ensure voices are loaded
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length === 0) {
+    console.log(`${TAG}: Voices not loaded yet, will queue when ready`);
+    // Wait for voices to load, then queue
+    window.speechSynthesis.onvoiceschanged = () => {
+      console.log(`${TAG}: Voices loaded, now queueing`);
+      window.speechSynthesis.onvoiceschanged = null; // Prevent multiple calls
+      queueSpeech(text);
+    };
+    return;
+  }
+  
+  speechQueue.push(text);
+  console.log(`${TAG}: Queued speech (${speechQueue.length} in queue)`);
+  
+  // Start processing if not already processing
+  if (!isProcessingQueue && !isSpeaking) {
+    processNextInQueue();
+  }
 }
 
 // Extract text from a markdown paragraph element
@@ -95,18 +146,8 @@ function addSpokenItem(text, element) {
     currentIndex = spokenItems.length - 1;
     console.log(`${TAG}: Found new text to speak (${spokenItems.length}):`, text.substring(0, 100));
     
-    // Ensure voices are loaded before speaking
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length === 0) {
-      console.log(`${TAG}: Voices not loaded yet, will speak when ready`);
-      // Wait for voices to load, then speak
-      window.speechSynthesis.onvoiceschanged = () => {
-        console.log(`${TAG}: Voices loaded, now speaking`);
-        speak(text);
-      };
-    } else {
-      speak(text);
-    }
+    // Queue the text for speaking instead of speaking immediately
+    queueSpeech(text);
     
     return true;
   }
@@ -310,7 +351,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (currentIndex > 0) {
         currentIndex--;
         const item = spokenItems[currentIndex];
-        speak(item.text);
+        speak(item.text, true); // Cancel previous speech when navigating
         sendResponse({ success: true, currentIndex: currentIndex, total: spokenItems.length });
       } else {
         sendResponse({ success: false, message: 'Already at first item' });
@@ -321,7 +362,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (currentIndex < spokenItems.length - 1) {
         currentIndex++;
         const item = spokenItems[currentIndex];
-        speak(item.text);
+        speak(item.text, true); // Cancel previous speech when navigating
         sendResponse({ success: true, currentIndex: currentIndex, total: spokenItems.length });
       } else {
         sendResponse({ success: false, message: 'Already at last item' });
@@ -330,6 +371,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'stop':
       window.speechSynthesis.cancel();
+      speechQueue = []; // Clear the queue
+      isProcessingQueue = false;
       isSpeaking = false;
       sendResponse({ success: true });
       break;
@@ -339,7 +382,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         success: true,
         currentIndex: currentIndex,
         total: spokenItems.length,
-        isSpeaking: isSpeaking
+        isSpeaking: isSpeaking,
+        queueLength: speechQueue.length
       });
       break;
 
