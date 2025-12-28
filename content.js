@@ -102,13 +102,33 @@ function processMarkdownContainer(container) {
 
 // Process a session details container
 function processSessionContainer(sessionContainer) {
-  console.log(`${TAG}: Processing session container`);
+  console.log(`${TAG}: Processing session container`, sessionContainer);
+  console.log(`${TAG}: Session container classes:`, sessionContainer.className);
+  console.log(`${TAG}: Session container children count:`, sessionContainer.children.length);
   
   // Find all markdown containers within this session using attribute selector
   const markdownContainers = sessionContainer.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
   console.log(`${TAG}: Found ${markdownContainers.length} markdown container(s) in session`);
   
+  if (markdownContainers.length === 0) {
+    // Debug: log what we do have
+    const allDivs = sessionContainer.querySelectorAll('div');
+    console.log(`${TAG}: Total divs in session:`, allDivs.length);
+    
+    // Check for markdown-body class
+    const markdownBodyElements = sessionContainer.querySelectorAll('.markdown-body');
+    console.log(`${TAG}: Elements with markdown-body class:`, markdownBodyElements.length);
+    
+    // Check for any MarkdownRenderer
+    Array.from(allDivs).forEach((div, i) => {
+      if (div.className && div.className.includes('MarkdownRenderer')) {
+        console.log(`${TAG}: Found MarkdownRenderer element [${i}]:`, div.className);
+      }
+    });
+  }
+  
   markdownContainers.forEach(container => {
+    console.log(`${TAG}: Processing markdown container with classes:`, container.className);
     processMarkdownContainer(container);
     
     // Set up observer for new paragraphs in this container
