@@ -234,6 +234,17 @@ function processSessionContainer(sessionContainer) {
     observeMarkdownContainer(container);
   });
   
+  // Also find and process shimmer text (status messages like "Fueling the runtime engines…")
+  const shimmerTextElements = sessionContainer.querySelectorAll('[class*="WithShimmerEffect-module__shimmerText--"]');
+  console.log(`${TAG}: Found ${shimmerTextElements.length} shimmer text element(s) in session`);
+  
+  shimmerTextElements.forEach(shimmerText => {
+    const text = extractTextFromElement(shimmerText);
+    if (text) {
+      addSpokenItem(text, shimmerText);
+    }
+  });
+  
   // Set up observer on the session container to watch for dynamically loaded content
   const contentObserver = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
@@ -273,6 +284,24 @@ function processSessionContainer(sessionContainer) {
             filteredContainers.forEach(container => {
               processMarkdownContainer(container);
               observeMarkdownContainer(container);
+            });
+          }
+          
+          // Also check for shimmer text (status messages)
+          let newShimmerTexts = [];
+          if (node.matches && node.matches('[class*="WithShimmerEffect-module__shimmerText--"]')) {
+            newShimmerTexts.push(node);
+          }
+          const childShimmer = node.querySelectorAll ? node.querySelectorAll('[class*="WithShimmerEffect-module__shimmerText--"]') : [];
+          newShimmerTexts.push(...Array.from(childShimmer));
+          
+          if (newShimmerTexts.length > 0) {
+            console.log(`${TAG}: Found ${newShimmerTexts.length} new shimmer text element(s) added to session`);
+            newShimmerTexts.forEach(shimmerText => {
+              const text = extractTextFromElement(shimmerText);
+              if (text) {
+                addSpokenItem(text, shimmerText);
+              }
             });
           }
         }
