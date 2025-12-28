@@ -78,6 +78,21 @@ function speak(text, cancelPrevious = false) {
     const speakingItem = spokenItems.find(item => item.text === text);
     if (speakingItem) {
       currentSpeakingIndex = spokenItems.indexOf(speakingItem);
+      
+      // Add visual highlighting to the element being spoken
+      if (speakingItem.element) {
+        const element = speakingItem.element;
+        const computedStyle = window.getComputedStyle(element);
+        const currentBgColor = computedStyle.backgroundColor;
+        
+        // Save original background color (or lack thereof)
+        element.setAttribute('data-tts-original-bg', currentBgColor);
+        element.setAttribute('data-tts-highlighting', 'true');
+        
+        // Apply yellow highlight
+        element.style.backgroundColor = 'yellow';
+        element.style.transition = 'background-color 0.3s ease';
+      }
     }
     console.log(`${TAG}: ✓ Speech STARTED: "${text.substring(0, 50)}..."`);
   };
@@ -85,6 +100,28 @@ function speak(text, cancelPrevious = false) {
   utterance.onend = () => {
     isSpeaking = false;
     console.log(`${TAG}: ✓ Speech ENDED: "${text.substring(0, 50)}..."`);
+    
+    // Remove visual highlighting from the element that was just spoken
+    const speakingItem = spokenItems.find(item => item.text === text);
+    if (speakingItem && speakingItem.element) {
+      const element = speakingItem.element;
+      if (element.getAttribute('data-tts-highlighting') === 'true') {
+        const originalBg = element.getAttribute('data-tts-original-bg');
+        
+        // Restore original background color
+        if (originalBg && originalBg !== 'rgba(0, 0, 0, 0)' && originalBg !== 'transparent') {
+          element.style.backgroundColor = originalBg;
+        } else {
+          // Remove the background color style to revert to original
+          element.style.backgroundColor = '';
+        }
+        
+        // Clean up data attributes
+        element.removeAttribute('data-tts-original-bg');
+        element.removeAttribute('data-tts-highlighting');
+      }
+    }
+    
     // Process next item in queue after a small delay, unless paused
     if (!isPaused) {
       setTimeout(processNextInQueue, 2000); // 2 second delay between items
@@ -102,6 +139,26 @@ function speak(text, cancelPrevious = false) {
       voicesAvailable: window.speechSynthesis.getVoices().length,
       textLength: text.length
     });
+    
+    // Remove visual highlighting in case of error
+    const speakingItem = spokenItems.find(item => item.text === text);
+    if (speakingItem && speakingItem.element) {
+      const element = speakingItem.element;
+      if (element.getAttribute('data-tts-highlighting') === 'true') {
+        const originalBg = element.getAttribute('data-tts-original-bg');
+        
+        // Restore original background color
+        if (originalBg && originalBg !== 'rgba(0, 0, 0, 0)' && originalBg !== 'transparent') {
+          element.style.backgroundColor = originalBg;
+        } else {
+          element.style.backgroundColor = '';
+        }
+        
+        // Clean up data attributes
+        element.removeAttribute('data-tts-original-bg');
+        element.removeAttribute('data-tts-highlighting');
+      }
+    }
     
     // Continue with queue even on error
     setTimeout(processNextInQueue, 100);
