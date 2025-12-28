@@ -65,6 +65,32 @@
       font-size: 14px;
       color: #666;
     }
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .slider-row label {
+      font-size: 13px;
+      font-weight: bold;
+      min-width: 50px;
+      color: #333;
+    }
+    .slider-row input[type="range"] {
+      flex: 1;
+      cursor: pointer;
+    }
+    .slider-row .value {
+      min-width: 35px;
+      text-align: right;
+      font-size: 13px;
+      color: #666;
+    }
   </style>
 </head>
 <body>
@@ -76,6 +102,18 @@
       <button id="nextButton" title="Next item">Next ⏭</button>
     </div>
     <button id="testSpeakButton" title="Test speech synthesis">🔊 Test Speak</button>
+    <div class="slider-container">
+      <div class="slider-row">
+        <label for="rateSlider">Speed:</label>
+        <input type="range" id="rateSlider" min="0.5" max="2" step="0.1" value="1.2">
+        <span class="value" id="rateValue">1.2x</span>
+      </div>
+      <div class="slider-row">
+        <label for="pitchSlider">Pitch:</label>
+        <input type="range" id="pitchSlider" min="0.5" max="2" step="0.1" value="1">
+        <span class="value" id="pitchValue">1.0x</span>
+      </div>
+    </div>
     <div id="status" role="status" aria-live="polite">Ready</div>
   </div>
   <script src="popup.js"></script>

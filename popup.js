@@ -9,6 +9,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const stopButton = document.getElementById('stopButton');
   const testSpeakButton = document.getElementById('testSpeakButton');
   const statusDiv = document.getElementById('status');
+  const rateSlider = document.getElementById('rateSlider');
+  const rateValue = document.getElementById('rateValue');
+  const pitchSlider = document.getElementById('pitchSlider');
+  const pitchValue = document.getElementById('pitchValue');
 
   // Helper function to send message to content script
   async function sendMessageToActiveTab(message) {
@@ -105,6 +109,34 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Refresh status after a short delay
     setTimeout(refreshStatus, 2000);
+  });
+
+  // Load saved rate and pitch values
+  chrome.storage.sync.get(['speechRate', 'speechPitch'], function(result) {
+    if (result.speechRate !== undefined) {
+      rateSlider.value = result.speechRate;
+      rateValue.textContent = result.speechRate + 'x';
+    }
+    if (result.speechPitch !== undefined) {
+      pitchSlider.value = result.speechPitch;
+      pitchValue.textContent = result.speechPitch + 'x';
+    }
+  });
+
+  // Rate slider handler
+  rateSlider.addEventListener('input', function() {
+    const rate = parseFloat(rateSlider.value);
+    rateValue.textContent = rate.toFixed(1) + 'x';
+    chrome.storage.sync.set({ speechRate: rate });
+    sendMessageToActiveTab({ action: 'setRate', rate: rate });
+  });
+
+  // Pitch slider handler
+  pitchSlider.addEventListener('input', function() {
+    const pitch = parseFloat(pitchSlider.value);
+    pitchValue.textContent = pitch.toFixed(1) + 'x';
+    chrome.storage.sync.set({ speechPitch: pitch });
+    sendMessageToActiveTab({ action: 'setPitch', pitch: pitch });
   });
 
   // Initial status check

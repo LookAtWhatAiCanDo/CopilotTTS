@@ -5,7 +5,7 @@ const TAG = 'CopilotTTS-Content';
 const DESIRED_VOICE_NAME = 'Daniel (English (United Kingdom))';
 const DEFAULT_LANGUAGE = 'en-GB';
 const DEFAULT_VOLUME = 1;
-const DEFAULT_RATE = 1;
+const DEFAULT_RATE = 1.2;  // Default speed set to 1.2x
 const DEFAULT_PITCH = 1;
 
 // State management
@@ -16,6 +16,8 @@ let selectedVoice = null;
 let speechQueue = []; // Queue for items to speak
 let isProcessingQueue = false; // Flag to prevent concurrent queue processing
 let autoSpeakEnabled = true; // Enable auto-speak - errors are logged but don't break functionality
+let speechRate = DEFAULT_RATE; // Current speech rate
+let speechPitch = DEFAULT_PITCH; // Current speech pitch
 
 // Initialize voices
 function initVoices() {
@@ -31,6 +33,18 @@ function initVoices() {
   
   selectedVoice = voices.find(v => v.name === DESIRED_VOICE_NAME) || voices[0];
   console.log(`${TAG}: initVoices: Using voice: ${selectedVoice.name}`);
+  
+  // Load saved rate and pitch from storage
+  chrome.storage.sync.get(['speechRate', 'speechPitch'], function(result) {
+    if (result.speechRate !== undefined) {
+      speechRate = result.speechRate;
+      console.log(`${TAG}: Loaded speech rate: ${speechRate}`);
+    }
+    if (result.speechPitch !== undefined) {
+      speechPitch = result.speechPitch;
+      console.log(`${TAG}: Loaded speech pitch: ${speechPitch}`);
+    }
+  });
 }
 
 // Speak text using Web Speech API
@@ -53,8 +67,8 @@ function speak(text, cancelPrevious = false) {
     utterance.lang = selectedVoice.lang || DEFAULT_LANGUAGE;
   }
   utterance.volume = DEFAULT_VOLUME;
-  utterance.rate = DEFAULT_RATE;
-  utterance.pitch = DEFAULT_PITCH;
+  utterance.rate = speechRate;
+  utterance.pitch = speechPitch;
 
   utterance.onstart = () => {
     isSpeaking = true;
@@ -408,6 +422,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       console.log(`${TAG}: Test speak requested from popup`);
       testSpeak(testText); // Call testSpeak directly (has user gesture from button click)
       sendResponse({ success: true, message: 'Test speech initiated' });
+      break;
+
+    case 'setRate':
+      // Update speech rate
+      speechRate = message.rate || DEFAULT_RATE;
+      console.log(`${TAG}: Speech rate set to: ${speechRate}`);
+      sendResponse({ success: true });
+      break;
+
+    case 'setPitch':
+      // Update speech pitch
+      speechPitch = message.pitch || DEFAULT_PITCH;
+      console.log(`${TAG}: Speech pitch set to: ${speechPitch}`);
+      sendResponse({ success: true });
       break;
 
     default:
