@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const previousButton = document.getElementById('previousButton');
   const nextButton = document.getElementById('nextButton');
   const stopButton = document.getElementById('stopButton');
+  const testSpeakButton = document.getElementById('testSpeakButton');
   const statusDiv = document.getElementById('status');
 
   // Helper function to send message to content script
@@ -86,6 +87,24 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Refresh status after a short delay
     setTimeout(refreshStatus, 100);
+  });
+
+  // Test Speak button handler
+  testSpeakButton.addEventListener('click', async function() {
+    testSpeakButton.disabled = true;
+    statusDiv.textContent = 'Testing speech...';
+    const response = await sendMessageToActiveTab({ action: 'testSpeak' });
+    if (response && response.success) {
+      statusDiv.textContent = 'Test speech initiated';
+    } else if (response && response.message) {
+      statusDiv.textContent = response.message;
+    } else {
+      statusDiv.textContent = 'Test failed';
+    }
+    testSpeakButton.disabled = false;
+    
+    // Refresh status after a short delay
+    setTimeout(refreshStatus, 2000);
   });
 
   // Initial status check

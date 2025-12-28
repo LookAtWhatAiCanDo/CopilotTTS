@@ -49,6 +49,14 @@
     button.stop:hover {
       background-color: #da190b;
     }
+    #testSpeakButton {
+      background-color: #2196F3;
+      width: 100%;
+      margin-top: 5px;
+    }
+    #testSpeakButton:hover {
+      background-color: #0b7dda;
+    }
     #status {
       padding: 10px;
       background-color: #f0f0f0;
@@ -67,6 +75,7 @@
       <button id="stopButton" class="stop" title="Stop speaking">⏹ Stop</button>
       <button id="nextButton" title="Next item">Next ⏭</button>
     </div>
+    <button id="testSpeakButton" title="Test speech synthesis">🔊 Test Speak</button>
     <div id="status" role="status" aria-live="polite">Ready</div>
   </div>
   <script src="popup.js"></script>

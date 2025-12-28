@@ -402,6 +402,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
       break;
 
+    case 'testSpeak':
+      // Test speech by speaking a simple phrase
+      const testText = 'This is a test of the text to speech system.';
+      console.log(`${TAG}: Test speak requested from popup`);
+      speak(testText, true); // Cancel any current speech
+      sendResponse({ success: true, message: 'Test speech initiated' });
+      break;
+
     default:
       sendResponse({ success: false, message: 'Unknown action' });
   }
