@@ -6,7 +6,7 @@ const TAG = 'CopilotTTS-Popup';
 document.addEventListener('DOMContentLoaded', function() {
   const previousButton = document.getElementById('previousButton');
   const nextButton = document.getElementById('nextButton');
-  const stopButton = document.getElementById('stopButton');
+  const playPauseButton = document.getElementById('playPauseButton');
   const testSpeakButton = document.getElementById('testSpeakButton');
   const statusDiv = document.getElementById('status');
   const rateSlider = document.getElementById('rateSlider');
@@ -45,16 +45,20 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateStatus(response) {
     if (response && response.success) {
       if (response.isPaused !== undefined && response.isPaused) {
-        // Update stop button to show resume
-        stopButton.textContent = '▶ Resume';
+        // Update button to show play
+        playPauseButton.textContent = '▶ Play';
+        playPauseButton.className = 'play';
+        playPauseButton.title = 'Resume speaking';
         if (response.currentIndex >= 0 && response.total > 0) {
           statusDiv.textContent = `Paused - Item ${response.currentIndex + 1} of ${response.total}`;
         } else {
           statusDiv.textContent = 'Paused';
         }
       } else {
-        // Update stop button to show pause/stop
-        stopButton.textContent = '⏹ Stop';
+        // Update button to show pause
+        playPauseButton.textContent = '⏸ Pause';
+        playPauseButton.className = 'stop';
+        playPauseButton.title = 'Pause speaking';
         if (response.total !== undefined) {
           if (response.currentIndex >= 0) {
             const current = response.currentIndex + 1;
@@ -100,16 +104,20 @@ document.addEventListener('DOMContentLoaded', function() {
   async function refreshStatus() {
     const response = await sendMessageToActiveTab({ action: 'getStatus' });
     if (response && response.success) {
-      // Update stop button based on pause state
+      // Update play/pause button based on pause state
       if (response.isPaused) {
-        stopButton.textContent = '▶ Resume';
+        playPauseButton.textContent = '▶ Play';
+        playPauseButton.className = 'play';
+        playPauseButton.title = 'Resume speaking';
         if (response.currentIndex >= 0 && response.total > 0) {
           statusDiv.textContent = `Paused - Item ${response.currentIndex + 1} of ${response.total}`;
         } else {
           statusDiv.textContent = 'Paused';
         }
       } else {
-        stopButton.textContent = '⏹ Stop';
+        playPauseButton.textContent = '⏸ Pause';
+        playPauseButton.className = 'stop';
+        playPauseButton.title = 'Pause speaking';
         if (response.total === 0) {
           statusDiv.textContent = 'No items yet';
         } else if (response.currentIndex >= 0) {
@@ -143,12 +151,12 @@ document.addEventListener('DOMContentLoaded', function() {
     nextButton.disabled = false;
   });
 
-  // Stop button handler
-  stopButton.addEventListener('click', async function() {
-    stopButton.disabled = true;
+  // Play/Pause button handler
+  playPauseButton.addEventListener('click', async function() {
+    playPauseButton.disabled = true;
     const response = await sendMessageToActiveTab({ action: 'stop' });
     updateStatus(response);
-    stopButton.disabled = false;
+    playPauseButton.disabled = false;
     
     // Refresh status after a short delay
     setTimeout(refreshStatus, 100);
