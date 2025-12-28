@@ -412,13 +412,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Initialize the extension
 function init() {
   console.log(`${TAG}: Initializing on Copilot Tasks page`);
-  console.log(`${TAG}: Auto-speak is ENABLED - content will be spoken as detected`);
-  console.log(`${TAG}: Note: Some "not-allowed" errors may appear but won't affect functionality`);
-  console.log(`${TAG}: Use Previous/Next buttons for manual navigation and re-speaking`);
   
-  // Initialize voices
+  // Initialize voices first
   initVoices();
-
+  
+  // Wait a bit for voices to load, then speak "Initialized"
+  setTimeout(() => {
+    console.log(`${TAG}: Speaking "Initialized"`);
+    speak("Initialized", false);
+  }, 1000);
+  
+  // TEMPORARILY COMMENTED OUT - DOM monitoring and auto-queueing
+  // This is to debug basic speech functionality first
+  /*
   // Try to find and monitor the TaskChat container
   if (!monitorTaskChat()) {
     // If not found, wait for DOM to be ready and retry
@@ -434,6 +440,16 @@ function init() {
       //console.log(`${TAG}: Stopped looking for TaskChat container`);
     }, 30000);
   }
+  */
+}
+
+// Function to speak after page is fully loaded
+function onPageLoaded() {
+  console.log(`${TAG}: Page fully loaded`);
+  setTimeout(() => {
+    console.log(`${TAG}: Speaking "Page Loaded"`);
+    speak("Page Loaded", false);
+  }, 500);
 }
 
 // Start when DOM is ready
@@ -441,4 +457,11 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
+}
+
+// Speak when page is fully loaded
+if (document.readyState === 'complete') {
+  onPageLoaded();
+} else {
+  window.addEventListener('load', onPageLoaded);
 }
