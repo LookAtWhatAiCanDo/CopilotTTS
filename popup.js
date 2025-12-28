@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Get initial status
-  function refreshStatus() {
+  async function refreshStatus() {
     const response = await sendMessageToActiveTab({ action: 'getStatus' });
     if (response && response.success) {
       // Update stop button based on pause state
