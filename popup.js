@@ -4,6 +4,10 @@
 const HELLO_TEXT = 'Hello World!';
 const STATUS_RESET_DELAY = 2000;
 const DESIRED_VOICE_NAME = 'Daniel (English (United Kingdom))';
+const DEFAULT_LANGUAGE = 'en-GB';
+const DEFAULT_VOLUME = 1;
+const DEFAULT_RATE = 1;
+const DEFAULT_PITCH = 1;
 const TAG = 'CopilotTTS';
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -60,10 +64,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.voice = voice;  // use specific voice
-    utterance.lang = voice.lang || 'en-GB'; // use voice's language or default to en-GB
-    utterance.volume = 1;     // set volume if needed
-    utterance.rate = 1;       // set rate if needed
-    utterance.pitch = 1;      // set pitch if needed
+    utterance.lang = voice.lang || DEFAULT_LANGUAGE; // use voice's language or default
+    utterance.volume = DEFAULT_VOLUME;
+    utterance.rate = DEFAULT_RATE;
+    utterance.pitch = DEFAULT_PITCH;
 
     utterance.onstart = function() {
       statusDiv.textContent = 'Speaking...';
