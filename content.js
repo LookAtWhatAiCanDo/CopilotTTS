@@ -153,8 +153,8 @@ function addSpokenItem(text, element) {
     currentIndex = spokenItems.length - 1;
     console.log(`${TAG}: Found new text to speak (${spokenItems.length}):`, text.substring(0, 100));
     
-    // Queue for speech - errors may occur but won't break functionality
-    queueSpeech(text);
+    // Queue for speech - use speakOrQueue to respect user interaction requirement
+    speakOrQueue(text);
     
     return true;
   }
@@ -533,10 +533,7 @@ function init() {
   // This will be spoken when user clicks
   speakOrQueue("Initialized");
   
-  // TEMPORARILY COMMENTED OUT - DOM monitoring and auto-queueing
-  // This is to debug basic speech functionality first
-  /*
-  // Try to find and monitor the TaskChat container
+  // Try to find and monitor the TaskChat container for markdown content
   if (!monitorTaskChat()) {
     // If not found, wait for DOM to be ready and retry
     const checkInterval = setInterval(() => {
@@ -548,10 +545,9 @@ function init() {
     // Stop trying after 30 seconds
     setTimeout(() => {
       clearInterval(checkInterval);
-      //console.log(`${TAG}: Stopped looking for TaskChat container`);
+      console.log(`${TAG}: Stopped looking for TaskChat container`);
     }, 30000);
   }
-  */
 }
 
 // Function to speak after page is fully loaded
