@@ -10,11 +10,14 @@ A Chrome browser extension that monitors GitHub Copilot Tasks pages and speaks t
 - Navigation controls: Previous, Pause/Play, Next
 - Progress slider to jump to any item in the conversation
 - Test Speak button to verify speech functionality
+- **Speech verbosity control** with three levels:
+  - **All**: Speaks all content including tool execution logs
+  - **Highlights & Summary** (default): Speaks Copilot responses and summaries, excludes tool logs
+  - **Summary Only**: Speaks only final summary messages from Copilot
 - Adjustable speech rate (0.5x to 2x, default 1.2x)
 - Adjustable speech pitch (0.5x to 2x, default 1.0x)
 - Speech queue with 2-second delays between items for better pacing
 - Persistent settings saved across sessions
-- Smart filtering to exclude tool execution logs
 - Visual status feedback showing current item position
 
 ## How It Works
@@ -26,7 +29,10 @@ The extension monitors the DOM of GitHub Copilot Tasks pages for:
 4. Status messages with shimmer effects (`WithShimmerEffect-module__shimmerText--*`)
 5. New sessions and content added dynamically as the conversation progresses
 
-The extension specifically **excludes tool logs** (content within `Tool-module__detailsContainer--*`) to focus on Copilot's actual responses.
+The extension filters content based on the selected **Speech Verbosity** level:
+- **All**: Speaks all markdown content, including tool execution logs within `Tool-module__detailsContainer--*`
+- **Highlights & Summary** (default): Speaks Copilot responses from `SessionLogs-module__markdownWrapper--*` and summary messages from `CopilotMessage-module__container--*`, but excludes tool logs
+- **Summary Only**: Only speaks summary messages from `CopilotMessage-module__container--*`
 
 When new text content is detected, it is queued for speaking. After the first user interaction (click or keypress), items are spoken automatically using the Web Speech API with:
 - A 2-second delay between items for better pacing
@@ -54,6 +60,10 @@ When new text content is detected, it is queued for speaking. After the first us
    - **Next ⏭**: Skip to the next item and speak it
    - **Progress Slider**: Jump to any specific item in the conversation
    - **🔊 Test Speak**: Test the speech synthesis
+   - **Speech Verbosity**: Control what content is spoken
+     - **All**: Speaks everything including tool execution logs
+     - **Highlights & Summary**: Speaks Copilot responses and summaries (default)
+     - **Summary Only**: Speaks only final summary messages
    - **Speed Slider**: Adjust speech rate (0.5x to 2x, default 1.2x)
    - **Pitch Slider**: Adjust speech pitch (0.5x to 2x, default 1.0x)
 6. The status shows your current position (e.g., "Item 3 of 10")
