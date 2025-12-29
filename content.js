@@ -9,6 +9,7 @@ const DEFAULT_RATE = 1.2;  // Default speed set to 1.2x
 const DEFAULT_PITCH = 1;
 const DEFAULT_VERBOSITY = 'highlights'; // Default verbosity: Highlights & Summary
 const DEFAULT_NEW_ONLY = true; // Default: skip pre-existing content
+const GRACE_PERIOD_MS = 2000; // Time window to consider content as pre-existing (milliseconds)
 
 // State management
 let spokenItems = [];
@@ -279,8 +280,8 @@ function addSpokenItem(text, element) {
     console.log(`${TAG}: Found new text to speak (${spokenItems.length}):`, text.substring(0, 100));
     
     // For 'New Only' mode, only queue items that are truly new (added after a grace period from init)
-    // Grace period of 2 seconds allows initial page load to complete
-    if (newOnlyMode && itemTimestamp < extensionInitTime + 2000) {
+    // Grace period allows initial page load to complete
+    if (newOnlyMode && itemTimestamp < extensionInitTime + GRACE_PERIOD_MS) {
       console.log(`${TAG}: [New Only mode] Skipping pre-existing content (found within ${Math.round((itemTimestamp - extensionInitTime) / 1000)}s of init)`);
       return true; // Item added but not queued for speech
     }

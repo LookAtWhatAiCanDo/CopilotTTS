@@ -128,6 +128,8 @@
       font-size: 13px;
       font-weight: bold;
       color: #333;
+      display: flex;
+      align-items: center;
     }
     .verbosity-container select {
       padding: 8px;
@@ -140,14 +142,9 @@
     .verbosity-container select:hover {
       border-color: #4CAF50;
     }
-    .verbosity-container label input[type="checkbox"] {
+    .verbosity-container input[type="checkbox"] {
       margin-right: 8px;
       cursor: pointer;
-    }
-    .verbosity-container label span {
-      cursor: pointer;
-      font-size: 13px;
-      color: #333;
     }
   </style>
 </head>
@@ -175,7 +172,7 @@
     <div class="verbosity-container">
       <label>
         <input type="checkbox" id="newOnlyCheckbox" checked>
-        <span>New Only (skip existing content)</span>
+        New Only (skip existing content)
       </label>
     </div>
     <div class="slider-container">
