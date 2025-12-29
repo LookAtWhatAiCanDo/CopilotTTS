@@ -14,6 +14,7 @@ A Chrome browser extension that monitors GitHub Copilot Tasks pages and speaks t
   - **All**: Speaks all content including tool execution logs
   - **Highlights & Summary** (default): Speaks Copilot responses and summaries, excludes tool logs
   - **Summary Only**: Speaks only final summary messages from Copilot
+- **New Only mode** (checkbox, enabled by default): Skip pre-existing content and only speak new content that appears after extension loads
 - Adjustable speech rate (0.5x to 2x, default 1.2x)
 - Adjustable speech pitch (0.5x to 2x, default 1.0x)
 - Speech queue with 2-second delays between items for better pacing
@@ -33,6 +34,10 @@ The extension filters content based on the selected **Speech Verbosity** level:
 - **All**: Speaks all markdown content, including tool execution logs within `Tool-module__detailsContainer--*`
 - **Highlights & Summary** (default): Speaks Copilot responses from `SessionLogs-module__markdownWrapper--*` and summary messages from `CopilotMessage-module__container--*`, but excludes tool logs
 - **Summary Only**: Only speaks summary messages from `CopilotMessage-module__container--*`
+
+The **New Only** checkbox (enabled by default) controls whether to skip pre-existing content:
+- When checked: Only speaks content that appears after the extension loads (2-second grace period)
+- When unchecked: Speaks all content found on the page, including what was already there
 
 When new text content is detected, it is queued for speaking. After the first user interaction (click or keypress), items are spoken automatically using the Web Speech API with:
 - A 2-second delay between items for better pacing
@@ -64,6 +69,7 @@ When new text content is detected, it is queued for speaking. After the first us
      - **All**: Speaks everything including tool execution logs
      - **Highlights & Summary**: Speaks Copilot responses and summaries (default)
      - **Summary Only**: Speaks only final summary messages
+   - **New Only**: Checkbox to skip pre-existing content (enabled by default)
    - **Speed Slider**: Adjust speech rate (0.5x to 2x, default 1.2x)
    - **Pitch Slider**: Adjust speech pitch (0.5x to 2x, default 1.0x)
 6. The status shows your current position (e.g., "Item 3 of 10")

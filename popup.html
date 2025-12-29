@@ -140,6 +140,15 @@
     .verbosity-container select:hover {
       border-color: #4CAF50;
     }
+    .verbosity-container label input[type="checkbox"] {
+      margin-right: 8px;
+      cursor: pointer;
+    }
+    .verbosity-container label span {
+      cursor: pointer;
+      font-size: 13px;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -162,6 +171,12 @@
         <option value="highlights" selected>Highlights &amp; Summary</option>
         <option value="summary">Summary Only</option>
       </select>
+    </div>
+    <div class="verbosity-container">
+      <label>
+        <input type="checkbox" id="newOnlyCheckbox" checked>
+        <span>New Only (skip existing content)</span>
+      </label>
     </div>
     <div class="slider-container">
       <div class="slider-row">

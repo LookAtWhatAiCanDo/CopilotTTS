@@ -8,6 +8,7 @@ const DEFAULT_VOLUME = 1;
 const DEFAULT_RATE = 1.2;  // Default speed set to 1.2x
 const DEFAULT_PITCH = 1;
 const DEFAULT_VERBOSITY = 'highlights'; // Default verbosity: Highlights & Summary
+const DEFAULT_NEW_ONLY = true; // Default: skip pre-existing content
 
 // State management
 let spokenItems = [];
@@ -22,6 +23,8 @@ let autoSpeakEnabled = true; // Enable auto-speak - errors are logged but don't 
 let speechRate = DEFAULT_RATE; // Current speech rate
 let speechPitch = DEFAULT_PITCH; // Current speech pitch
 let speechVerbosity = DEFAULT_VERBOSITY; // Current speech verbosity: 'all', 'highlights', or 'summary'
+let newOnlyMode = DEFAULT_NEW_ONLY; // Whether to skip pre-existing content
+let extensionInitTime = Date.now(); // Track when extension initialized to filter old content
 
 // Initialize voices
 function initVoices() {
@@ -38,8 +41,8 @@ function initVoices() {
   selectedVoice = voices.find(v => v.name === DESIRED_VOICE_NAME) || voices[0];
   console.log(`${TAG}: initVoices: Using voice: ${selectedVoice.name}`);
   
-  // Load saved rate, pitch, and verbosity from storage
-  chrome.storage.sync.get(['speechRate', 'speechPitch', 'speechVerbosity'], function(result) {
+  // Load saved rate, pitch, verbosity, and newOnly from storage
+  chrome.storage.sync.get(['speechRate', 'speechPitch', 'speechVerbosity', 'newOnly'], function(result) {
     if (result.speechRate !== undefined) {
       speechRate = result.speechRate;
       console.log(`${TAG}: Loaded speech rate: ${speechRate}`);
@@ -51,6 +54,10 @@ function initVoices() {
     if (result.speechVerbosity !== undefined) {
       speechVerbosity = result.speechVerbosity;
       console.log(`${TAG}: Loaded speech verbosity: ${speechVerbosity}`);
+    }
+    if (result.newOnly !== undefined) {
+      newOnlyMode = result.newOnly;
+      console.log(`${TAG}: Loaded new only mode: ${newOnlyMode}`);
     }
   });
 }
@@ -261,14 +268,22 @@ function shouldSpeakElement(element, container) {
 // Helper function to add a spoken item if not already tracked
 function addSpokenItem(text, element) {
   if (text && !spokenItems.some(item => item.text === text)) {
+    const itemTimestamp = Date.now();
     const item = {
       text: text,
       element: element,
-      timestamp: Date.now()
+      timestamp: itemTimestamp
     };
     spokenItems.push(item);
     // Don't update currentIndex here - it will be set when speech actually starts
     console.log(`${TAG}: Found new text to speak (${spokenItems.length}):`, text.substring(0, 100));
+    
+    // For 'New Only' mode, only queue items that are truly new (added after a grace period from init)
+    // Grace period of 2 seconds allows initial page load to complete
+    if (newOnlyMode && itemTimestamp < extensionInitTime + 2000) {
+      console.log(`${TAG}: [New Only mode] Skipping pre-existing content (found within ${Math.round((itemTimestamp - extensionInitTime) / 1000)}s of init)`);
+      return true; // Item added but not queued for speech
+    }
     
     // Queue for speech - use speakOrQueue to respect user interaction requirement
     speakOrQueue(text);
@@ -620,6 +635,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Update speech verbosity
       speechVerbosity = message.verbosity ?? DEFAULT_VERBOSITY;
       console.log(`${TAG}: Speech verbosity set to: ${speechVerbosity}`);
+      sendResponse({ success: true });
+      break;
+
+    case 'setNewOnly':
+      // Update new only mode
+      newOnlyMode = message.newOnly ?? DEFAULT_NEW_ONLY;
+      console.log(`${TAG}: New Only mode set to: ${newOnlyMode}`);
       sendResponse({ success: true });
       break;
 
