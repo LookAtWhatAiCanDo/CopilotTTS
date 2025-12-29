@@ -242,7 +242,7 @@ function filterTextForSpeech(text) {
   
   // 1. Handle separator lines (===..., ---..., etc.)
   // Replace lines with 4+ consecutive repeated characters with a pause or skip them
-  filtered = filtered.replace(/^[=_*-]{4,}$/gm, ''); // Remove separator lines entirely (hyphen at end to avoid range)
+  filtered = filtered.replace(/^[=_\*-]{4,}$/gm, ''); // Remove separator lines entirely (asterisk escaped, hyphen at end)
   
   // 2. Handle headers with # symbols
   // Add pauses after headers by converting them to sentences with periods
@@ -263,20 +263,17 @@ function filterTextForSpeech(text) {
   
   // 4. Handle bullet lists (*, -, +)
   // Announce "bullet" and add pauses between items
-  // Handle dash bullets first to ensure they're processed correctly
-  filtered = filtered.replace(/^-[ \t]+([^\n]*)$/gm, (match, content) => {
+  // Use helper function to format bullet content
+  const formatBulletContent = (content) => {
     if (content.trim().length === 0) {
       return `Bullet point.`;
     }
     return `Bullet point. ${content}.`;
-  });
-  filtered = filtered.replace(/^[\*+][ \t]+([^\n]*)$/gm, (match, content) => {
-    // Handle empty list items gracefully
-    if (content.trim().length === 0) {
-      return `Bullet point.`;
-    }
-    return `Bullet point. ${content}.`;
-  });
+  };
+  // Handle dash bullets first (to process before star/plus for clarity)
+  filtered = filtered.replace(/^-[ \t]+([^\n]*)$/gm, (match, content) => formatBulletContent(content));
+  // Handle star and plus bullets
+  filtered = filtered.replace(/^[\*+][ \t]+([^\n]*)$/gm, (match, content) => formatBulletContent(content));
   
   // 5. Clean up excessive repeated punctuation (e.g., "!!!!" -> "!", but not periods)
   filtered = filtered.replace(/([!?]){4,}/g, '$1');
