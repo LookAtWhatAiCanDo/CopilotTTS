@@ -323,7 +323,7 @@ function processSessionContainer(sessionContainer) {
     });
   });
   
-  console.log(`${TAG}: Found ${markdownContainers.length} markdown container(s) in session`);
+  console.log(`${TAG}: Found ${markdownContainers.length} markdown container(s) in session (verbosity: ${speechVerbosity})`);
   
   markdownContainers.forEach(container => {
     //console.log(`${TAG}: Processing markdown container with classes:`, container.className);
@@ -618,7 +618,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'setVerbosity':
       // Update speech verbosity
-      speechVerbosity = message.verbosity || DEFAULT_VERBOSITY;
+      speechVerbosity = message.verbosity ?? DEFAULT_VERBOSITY;
       console.log(`${TAG}: Speech verbosity set to: ${speechVerbosity}`);
       sendResponse({ success: true });
       break;
