@@ -242,24 +242,39 @@ function filterTextForSpeech(text) {
   
   // 1. Handle separator lines (===..., ---..., etc.)
   // Replace lines with 4+ consecutive repeated characters with a pause or skip them
-  filtered = filtered.replace(/^[=\-_*]{4,}$/gm, ''); // Remove separator lines entirely
+  filtered = filtered.replace(/^[=_*-]{4,}$/gm, ''); // Remove separator lines entirely (hyphen at end to avoid range)
   
   // 2. Handle headers with # symbols
   // Add pauses after headers by converting them to sentences with periods
-  filtered = filtered.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, title) => {
+  filtered = filtered.replace(/^(#{1,6})[ \t]+(.+)$/gm, (match, hashes, title) => {
     // Return the title with a period to create a natural pause
     return title + '.';
   });
   
   // 3. Handle numbered lists (1., 2., 3., etc.)
   // Announce the item number and add pauses between items
-  filtered = filtered.replace(/^(\d+)\.\s+(.+)$/gm, (match, number, content) => {
+  filtered = filtered.replace(/^(\d+)\.[ \t]+([^\n]*)$/gm, (match, number, content) => {
+    // Handle empty list items gracefully
+    if (content.trim().length === 0) {
+      return `Item ${number}.`;
+    }
     return `Item ${number}. ${content}.`;
   });
   
   // 4. Handle bullet lists (*, -, +)
   // Announce "bullet" and add pauses between items
-  filtered = filtered.replace(/^[\*\-\+]\s+(.+)$/gm, (match, content) => {
+  // Handle dash bullets first to ensure they're processed correctly
+  filtered = filtered.replace(/^-[ \t]+([^\n]*)$/gm, (match, content) => {
+    if (content.trim().length === 0) {
+      return `Bullet point.`;
+    }
+    return `Bullet point. ${content}.`;
+  });
+  filtered = filtered.replace(/^[\*+][ \t]+([^\n]*)$/gm, (match, content) => {
+    // Handle empty list items gracefully
+    if (content.trim().length === 0) {
+      return `Bullet point.`;
+    }
     return `Bullet point. ${content}.`;
   });
   
