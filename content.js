@@ -90,7 +90,7 @@ function speak(text, cancelPrevious = false) {
         element.setAttribute('data-tts-highlighting', 'true');
         
         // Apply yellow highlight
-        element.style.backgroundColor = 'yellow';
+        element.style.backgroundColor = 'rgba(255, 255, 0, 0.25)';
         element.style.transition = 'background-color 0.3s ease';
       }
     }
