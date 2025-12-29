@@ -231,6 +231,14 @@ function queueSpeech(text) {
   }
 }
 
+// Helper function to format bullet point content for speech
+function formatBulletContent(content) {
+  if (content.trim().length === 0) {
+    return `Bullet point.`;
+  }
+  return `Bullet point. ${content}.`;
+}
+
 // Filter text for better speech synthesis
 // Handles markdown complications: headers, separators, lists, etc.
 function filterTextForSpeech(text) {
@@ -241,8 +249,8 @@ function filterTextForSpeech(text) {
   let filtered = text;
   
   // 1. Handle separator lines (===..., ---..., etc.)
-  // Replace lines with 4+ consecutive repeated characters with a pause or skip them
-  filtered = filtered.replace(/^[=_\*-]{4,}$/gm, ''); // Remove separator lines entirely (asterisk escaped, hyphen at end)
+  // Remove lines with 4+ consecutive repeated characters
+  filtered = filtered.replace(/^[=_\*-]{4,}$/gm, '');
   
   // 2. Handle headers with # symbols
   // Add pauses after headers by converting them to sentences with periods
@@ -263,13 +271,6 @@ function filterTextForSpeech(text) {
   
   // 4. Handle bullet lists (*, -, +)
   // Announce "bullet" and add pauses between items
-  // Use helper function to format bullet content
-  const formatBulletContent = (content) => {
-    if (content.trim().length === 0) {
-      return `Bullet point.`;
-    }
-    return `Bullet point. ${content}.`;
-  };
   // Handle dash bullets first (to process before star/plus for clarity)
   filtered = filtered.replace(/^-[ \t]+([^\n]*)$/gm, (match, content) => formatBulletContent(content));
   // Handle star and plus bullets
