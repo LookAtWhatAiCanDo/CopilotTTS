@@ -6,8 +6,15 @@ A Chrome browser extension that monitors GitHub Copilot Tasks pages and speaks t
 
 - Automatically monitors `https://github.com/copilot/tasks/*` pages
 - Speaks markdown content from Copilot's responses as they appear
-- Navigation controls to skip to previous/next items
-- Stop button to halt speaking
+- Visual highlighting of the element currently being spoken
+- Navigation controls: Previous, Pause/Play, Next
+- Progress slider to jump to any item in the conversation
+- Test Speak button to verify speech functionality
+- Adjustable speech rate (0.5x to 2x, default 1.2x)
+- Adjustable speech pitch (0.5x to 2x, default 1.0x)
+- Speech queue with 2-second delays between items for better pacing
+- Persistent settings saved across sessions
+- Smart filtering to exclude tool execution logs
 - Visual status feedback showing current item position
 
 ## How It Works
@@ -15,10 +22,16 @@ A Chrome browser extension that monitors GitHub Copilot Tasks pages and speaks t
 The extension monitors the DOM of GitHub Copilot Tasks pages for:
 1. The `TaskChat-module__stickableContainer--*` node
 2. All `Session-module__detailsContainer--*` nodes within it
-3. All `markdown-body MarkdownRenderer-module__container--*` paragraphs within each session
-4. New sessions and paragraphs added dynamically as the conversation progresses
+3. All `MarkdownRenderer-module__container--*` elements within Copilot responses and messages
+4. Status messages with shimmer effects (`WithShimmerEffect-module__shimmerText--*`)
+5. New sessions and content added dynamically as the conversation progresses
 
-When new text content is detected, it automatically attempts to speak it using the Web Speech API.
+The extension specifically **excludes tool logs** (content within `Tool-module__detailsContainer--*`) to focus on Copilot's actual responses.
+
+When new text content is detected, it is queued for speaking. After the first user interaction (click or keypress), items are spoken automatically using the Web Speech API with:
+- A 2-second delay between items for better pacing
+- Visual highlighting (yellow background) on the element currently being spoken
+- Configurable speech rate and pitch settings saved across sessions
 
 ## Installation
 
@@ -33,14 +46,19 @@ When new text content is detected, it automatically attempts to speak it using t
 
 1. Navigate to a GitHub Copilot Tasks page (`https://github.com/copilot/tasks/*`)
 2. The extension will automatically start monitoring for new content
-3. As Copilot responds, the text will be spoken aloud automatically
-4. Click the extension icon to access controls:
+3. **Click anywhere on the page** to enable speech (required by browser security)
+4. As Copilot responds, the text will be spoken aloud automatically with visual highlighting
+5. Click the extension icon to access controls:
    - **⏮ Prev**: Go back to the previous item and speak it again
-   - **⏹ Stop**: Stop speaking immediately
+   - **⏸ Pause / ▶ Play**: Pause or resume speaking
    - **Next ⏭**: Skip to the next item and speak it
-5. The status shows your current position (e.g., "Item 3 of 10")
+   - **Progress Slider**: Jump to any specific item in the conversation
+   - **🔊 Test Speak**: Test the speech synthesis
+   - **Speed Slider**: Adjust speech rate (0.5x to 2x, default 1.2x)
+   - **Pitch Slider**: Adjust speech pitch (0.5x to 2x, default 1.0x)
+6. The status shows your current position (e.g., "Item 3 of 10")
 
-**Note:** You may see some "not-allowed" errors in the console when content is detected very early in the page lifecycle. These errors don't affect functionality - the navigation buttons will always work reliably to speak content on demand.
+**Note:** The extension requires a user interaction (click or keypress) before it can speak. This is a browser security requirement. Once you interact with the page, all queued content will be spoken automatically with a 2-second delay between items. Elements being spoken are highlighted with a yellow background.
 
 ## File Structure
 
@@ -49,13 +67,16 @@ CopilotTTS/
 ├── manifest.json      # Extension configuration and metadata
 ├── content.js         # Content script that monitors the page
 ├── popup.html         # Extension popup UI
-├── popup.js          # Extension popup logic
-├── copilot.html      # Reference template for DOM structure
-├── icons/            # Extension icons
+├── popup.js           # Extension popup logic
+├── icons/             # Extension icons
 │   ├── icon16.png
 │   ├── icon48.png
 │   └── icon128.png
-└── README.md         # This file
+├── seeds/             # Sample Copilot Tasks HTML pages for testing
+│   ├── copilot_task1.html
+│   └── copilot_task2.html
+├── README.md          # This file
+└── TESTING.md         # Testing guide
 ```
 
 ## Requirements
@@ -67,9 +88,16 @@ CopilotTTS/
 ## Development
 
 The extension consists of:
-- **Content Script** (`content.js`): Injected into Copilot Tasks pages to monitor DOM and speak text
-- **Popup** (`popup.html`, `popup.js`): User interface for navigation controls
+- **Content Script** (`content.js`): Injected into Copilot Tasks pages to monitor DOM, queue speech items, and speak text with visual highlighting
+- **Popup** (`popup.html`, `popup.js`): User interface for navigation controls, progress slider, test button, and speech settings
 - **Manifest** (`manifest.json`): Extension configuration with proper permissions and content script injection
+
+### Key Features
+- **Speech Queue**: Items are queued and spoken sequentially with 2-second delays
+- **Visual Feedback**: Yellow highlighting indicates which element is currently being spoken
+- **User Interaction Requirement**: Complies with browser autoplay policies by requiring initial user interaction
+- **Persistent Settings**: Speech rate and pitch preferences are saved using chrome.storage.sync
+- **Smart Content Filtering**: Only speaks Copilot responses and status messages, excludes tool execution logs
 
 ## License
 
