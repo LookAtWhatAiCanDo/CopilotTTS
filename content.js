@@ -230,6 +230,18 @@ function extractTextFromElement(element) {
   return text;
 }
 
+// Helper function to check if an element has a parent with a specific class
+function hasParentWithClass(element, container, classNameToCheck) {
+  let parent = element.parentElement;
+  while (parent && parent !== container) {
+    if (parent.className && parent.className.includes(classNameToCheck)) {
+      return true;
+    }
+    parent = parent.parentElement;
+  }
+  return false;
+}
+
 // Check if an element should be spoken based on verbosity setting
 function shouldSpeakElement(element, container) {
   // For 'all' verbosity, speak everything
@@ -239,27 +251,11 @@ function shouldSpeakElement(element, container) {
   
   // For 'summary' verbosity, only speak CopilotMessage containers
   if (speechVerbosity === 'summary') {
-    // Check if element is inside a CopilotMessage-module__container
-    let parent = element.parentElement;
-    while (parent && parent !== container) {
-      if (parent.className && parent.className.includes('CopilotMessage-module__container')) {
-        return true;
-      }
-      parent = parent.parentElement;
-    }
-    return false;
+    return hasParentWithClass(element, container, 'CopilotMessage-module__container');
   }
   
   // For 'highlights' verbosity (default), exclude tool logs but include everything else
-  // Check if element is inside a Tool-module__detailsContainer
-  let parent = element.parentElement;
-  while (parent && parent !== container) {
-    if (parent.className && parent.className.includes('Tool-module__detailsContainer')) {
-      return false; // Exclude tool logs
-    }
-    parent = parent.parentElement;
-  }
-  return true;
+  return !hasParentWithClass(element, container, 'Tool-module__detailsContainer');
 }
 
 // Helper function to add a spoken item if not already tracked
