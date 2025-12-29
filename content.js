@@ -7,6 +7,7 @@ const DEFAULT_LANGUAGE = 'en-GB';
 const DEFAULT_VOLUME = 1;
 const DEFAULT_RATE = 1.2;  // Default speed set to 1.2x
 const DEFAULT_PITCH = 1;
+const DEFAULT_VERBOSITY = 'highlights'; // Default verbosity: Highlights & Summary
 
 // State management
 let spokenItems = [];
@@ -20,6 +21,7 @@ let isProcessingQueue = false; // Flag to prevent concurrent queue processing
 let autoSpeakEnabled = true; // Enable auto-speak - errors are logged but don't break functionality
 let speechRate = DEFAULT_RATE; // Current speech rate
 let speechPitch = DEFAULT_PITCH; // Current speech pitch
+let speechVerbosity = DEFAULT_VERBOSITY; // Current speech verbosity: 'all', 'highlights', or 'summary'
 
 // Initialize voices
 function initVoices() {
@@ -36,8 +38,8 @@ function initVoices() {
   selectedVoice = voices.find(v => v.name === DESIRED_VOICE_NAME) || voices[0];
   console.log(`${TAG}: initVoices: Using voice: ${selectedVoice.name}`);
   
-  // Load saved rate and pitch from storage
-  chrome.storage.sync.get(['speechRate', 'speechPitch'], function(result) {
+  // Load saved rate, pitch, and verbosity from storage
+  chrome.storage.sync.get(['speechRate', 'speechPitch', 'speechVerbosity'], function(result) {
     if (result.speechRate !== undefined) {
       speechRate = result.speechRate;
       console.log(`${TAG}: Loaded speech rate: ${speechRate}`);
@@ -45,6 +47,10 @@ function initVoices() {
     if (result.speechPitch !== undefined) {
       speechPitch = result.speechPitch;
       console.log(`${TAG}: Loaded speech pitch: ${speechPitch}`);
+    }
+    if (result.speechVerbosity !== undefined) {
+      speechVerbosity = result.speechVerbosity;
+      console.log(`${TAG}: Loaded speech verbosity: ${speechVerbosity}`);
     }
   });
 }
@@ -224,6 +230,38 @@ function extractTextFromElement(element) {
   return text;
 }
 
+// Check if an element should be spoken based on verbosity setting
+function shouldSpeakElement(element, container) {
+  // For 'all' verbosity, speak everything
+  if (speechVerbosity === 'all') {
+    return true;
+  }
+  
+  // For 'summary' verbosity, only speak CopilotMessage containers
+  if (speechVerbosity === 'summary') {
+    // Check if element is inside a CopilotMessage-module__container
+    let parent = element.parentElement;
+    while (parent && parent !== container) {
+      if (parent.className && parent.className.includes('CopilotMessage-module__container')) {
+        return true;
+      }
+      parent = parent.parentElement;
+    }
+    return false;
+  }
+  
+  // For 'highlights' verbosity (default), exclude tool logs but include everything else
+  // Check if element is inside a Tool-module__detailsContainer
+  let parent = element.parentElement;
+  while (parent && parent !== container) {
+    if (parent.className && parent.className.includes('Tool-module__detailsContainer')) {
+      return false; // Exclude tool logs
+    }
+    parent = parent.parentElement;
+  }
+  return true;
+}
+
 // Helper function to add a spoken item if not already tracked
 function addSpokenItem(text, element) {
   if (text && !spokenItems.some(item => item.text === text)) {
@@ -245,7 +283,12 @@ function addSpokenItem(text, element) {
 }
 
 // Process a markdown container and extract all inner text
-function processMarkdownContainer(container) {
+function processMarkdownContainer(container, sessionContainer) {
+  // Check if this container should be spoken based on verbosity
+  if (!shouldSpeakElement(container, sessionContainer)) {
+    return;
+  }
+  
   // Extract all text content from the markdown container (not just <p> blocks)
   const text = extractTextFromElement(container);
   if (text) {
@@ -262,7 +305,7 @@ function processSessionContainer(sessionContainer) {
   // Find markdown containers in two locations:
   // 1. Within SessionLogs-module__markdownWrapper (Copilot responses)
   // 2. Within CopilotMessage-module__container (Copilot messages)
-  // Exclude markdown containers inside Tool-module__detailsContainer (tool logs)
+  // Note: Filtering based on verbosity is handled in shouldSpeakElement()
   const markdownContainers = [];
   
   // Find markdown in SessionLogs-module__markdownWrapper
@@ -271,19 +314,7 @@ function processSessionContainer(sessionContainer) {
     // Get markdown containers directly within this wrapper
     const markdownsInWrapper = wrapper.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
     markdownsInWrapper.forEach(container => {
-      // Verify this container is not inside a Tool-module__detailsContainer
-      let parent = container.parentElement;
-      let isInsideTool = false;
-      while (parent && parent !== wrapper) {
-        if (parent.className && parent.className.includes('Tool-module__detailsContainer')) {
-          isInsideTool = true;
-          break;
-        }
-        parent = parent.parentElement;
-      }
-      if (!isInsideTool) {
-        markdownContainers.push(container);
-      }
+      markdownContainers.push(container);
     });
   });
   
@@ -292,30 +323,18 @@ function processSessionContainer(sessionContainer) {
   copilotMessages.forEach(messageContainer => {
     const markdownsInMessage = messageContainer.querySelectorAll('[class*="MarkdownRenderer-module__container--"]');
     markdownsInMessage.forEach(container => {
-      // Verify this container is not inside a Tool-module__detailsContainer
-      let parent = container.parentElement;
-      let isInsideTool = false;
-      while (parent && parent !== messageContainer) {
-        if (parent.className && parent.className.includes('Tool-module__detailsContainer')) {
-          isInsideTool = true;
-          break;
-        }
-        parent = parent.parentElement;
-      }
-      if (!isInsideTool) {
-        markdownContainers.push(container);
-      }
+      markdownContainers.push(container);
     });
   });
   
-  console.log(`${TAG}: Found ${markdownContainers.length} Copilot response markdown container(s) in session (excluding tool logs)`);
+  console.log(`${TAG}: Found ${markdownContainers.length} markdown container(s) in session`);
   
   markdownContainers.forEach(container => {
     //console.log(`${TAG}: Processing markdown container with classes:`, container.className);
-    processMarkdownContainer(container);
+    processMarkdownContainer(container, sessionContainer);
     
     // Set up observer for new paragraphs in this container
-    observeMarkdownContainer(container);
+    observeMarkdownContainer(container, sessionContainer);
   });
   
   // Also find and process shimmer text (status messages like "Fueling the runtime engines…")
@@ -323,9 +342,12 @@ function processSessionContainer(sessionContainer) {
   console.log(`${TAG}: Found ${shimmerTextElements.length} shimmer text element(s) in session`);
   
   shimmerTextElements.forEach(shimmerText => {
-    const text = extractTextFromElement(shimmerText);
-    if (text) {
-      addSpokenItem(text, shimmerText);
+    // Shimmer text should be spoken based on verbosity
+    if (shouldSpeakElement(shimmerText, sessionContainer)) {
+      const text = extractTextFromElement(shimmerText);
+      if (text) {
+        addSpokenItem(text, shimmerText);
+      }
     }
   });
   
@@ -342,32 +364,11 @@ function processSessionContainer(sessionContainer) {
           const childMarkdown = node.querySelectorAll ? node.querySelectorAll('[class*="MarkdownRenderer-module__container--"]') : [];
           newMarkdownContainers.push(...Array.from(childMarkdown));
           
-          // Filter out markdown containers inside tool logs
-          const filteredContainers = newMarkdownContainers.filter(container => {
-            // Check if container is inside a Tool-module__detailsContainer
-            let parent = container.parentElement;
-            while (parent && parent !== sessionContainer) {
-              if (parent.className && parent.className.includes('Tool-module__detailsContainer')) {
-                return false; // Exclude this container
-              }
-              parent = parent.parentElement;
-            }
-            // Also check if container is inside SessionLogs-module__markdownWrapper (Copilot response)
-            parent = container.parentElement;
-            while (parent && parent !== sessionContainer) {
-              if (parent.className && parent.className.includes('SessionLogs-module__markdownWrapper')) {
-                return true; // Include this container
-              }
-              parent = parent.parentElement;
-            }
-            return false; // Exclude if not in SessionLogs wrapper
-          });
-          
-          if (filteredContainers.length > 0) {
-            console.log(`${TAG}: Found ${filteredContainers.length} new Copilot response markdown container(s) added to session`);
-            filteredContainers.forEach(container => {
-              processMarkdownContainer(container);
-              observeMarkdownContainer(container);
+          if (newMarkdownContainers.length > 0) {
+            console.log(`${TAG}: Found ${newMarkdownContainers.length} new markdown container(s) added to session`);
+            newMarkdownContainers.forEach(container => {
+              processMarkdownContainer(container, sessionContainer);
+              observeMarkdownContainer(container, sessionContainer);
             });
           }
           
@@ -382,9 +383,11 @@ function processSessionContainer(sessionContainer) {
           if (newShimmerTexts.length > 0) {
             console.log(`${TAG}: Found ${newShimmerTexts.length} new shimmer text element(s) added to session`);
             newShimmerTexts.forEach(shimmerText => {
-              const text = extractTextFromElement(shimmerText);
-              if (text) {
-                addSpokenItem(text, shimmerText);
+              if (shouldSpeakElement(shimmerText, sessionContainer)) {
+                const text = extractTextFromElement(shimmerText);
+                if (text) {
+                  addSpokenItem(text, shimmerText);
+                }
               }
             });
           }
@@ -402,16 +405,19 @@ function processSessionContainer(sessionContainer) {
 }
 
 // Observe a markdown container for new paragraphs
-function observeMarkdownContainer(container) {
+function observeMarkdownContainer(container, sessionContainer) {
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
           if (node.tagName === 'P') {
             //console.log(`${TAG}: Found new <p> element`);
-            const text = extractTextFromElement(node);
-            if (addSpokenItem(text, node)) {
-              //console.log(`${TAG}: New paragraph detected`);
+            // Check if this paragraph should be spoken based on verbosity
+            if (shouldSpeakElement(node, sessionContainer)) {
+              const text = extractTextFromElement(node);
+              if (addSpokenItem(text, node)) {
+                //console.log(`${TAG}: New paragraph detected`);
+              }
             }
           }
           // Check for nested paragraphs
@@ -420,9 +426,11 @@ function observeMarkdownContainer(container) {
             //console.log(`${TAG}: Found ${nestedPs.length} nested <p> element(s)`);
           }
           nestedPs.forEach(p => {
-            const text = extractTextFromElement(p);
-            if (addSpokenItem(text, p)) {
-              //console.log(`${TAG}: New nested paragraph detected`);
+            if (shouldSpeakElement(p, sessionContainer)) {
+              const text = extractTextFromElement(p);
+              if (addSpokenItem(text, p)) {
+                //console.log(`${TAG}: New nested paragraph detected`);
+              }
             }
           });
         }
@@ -609,6 +617,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Update speech pitch
       speechPitch = message.pitch || DEFAULT_PITCH;
       console.log(`${TAG}: Speech pitch set to: ${speechPitch}`);
+      sendResponse({ success: true });
+      break;
+
+    case 'setVerbosity':
+      // Update speech verbosity
+      speechVerbosity = message.verbosity || DEFAULT_VERBOSITY;
+      console.log(`${TAG}: Speech verbosity set to: ${speechVerbosity}`);
       sendResponse({ success: true });
       break;
 

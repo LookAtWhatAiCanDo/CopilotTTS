@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const pitchValue = document.getElementById('pitchValue');
   const progressSlider = document.getElementById('progressSlider');
   const progressLabel = document.getElementById('progressLabel');
+  const verbositySelect = document.getElementById('verbositySelect');
 
   // Helper function to send message to content script
   async function sendMessageToActiveTab(message) {
@@ -181,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Load saved rate and pitch values
-  chrome.storage.sync.get(['speechRate', 'speechPitch'], function(result) {
+  chrome.storage.sync.get(['speechRate', 'speechPitch', 'speechVerbosity'], function(result) {
     if (result.speechRate !== undefined) {
       rateSlider.value = result.speechRate;
       rateValue.textContent = result.speechRate + 'x';
@@ -189,6 +190,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (result.speechPitch !== undefined) {
       pitchSlider.value = result.speechPitch;
       pitchValue.textContent = result.speechPitch + 'x';
+    }
+    if (result.speechVerbosity !== undefined) {
+      verbositySelect.value = result.speechVerbosity;
     }
   });
 
@@ -224,6 +228,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const targetIndex = parseInt(progressSlider.value);
     const maxValue = parseInt(progressSlider.max);
     progressLabel.textContent = `Item ${targetIndex} / ${maxValue}`;
+  });
+
+  // Verbosity select handler
+  verbositySelect.addEventListener('change', function() {
+    const verbosity = verbositySelect.value;
+    chrome.storage.sync.set({ speechVerbosity: verbosity });
+    sendMessageToActiveTab({ action: 'setVerbosity', verbosity: verbosity });
+    console.log(`${TAG}: Speech verbosity set to: ${verbosity}`);
   });
 
   // Initial status check

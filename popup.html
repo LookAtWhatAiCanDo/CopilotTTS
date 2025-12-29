@@ -119,6 +119,27 @@
       font-size: 13px;
       color: #666;
     }
+    .verbosity-container {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .verbosity-container label {
+      font-size: 13px;
+      font-weight: bold;
+      color: #333;
+    }
+    .verbosity-container select {
+      padding: 8px;
+      font-size: 13px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: white;
+      cursor: pointer;
+    }
+    .verbosity-container select:hover {
+      border-color: #4CAF50;
+    }
   </style>
 </head>
 <body>
@@ -134,6 +155,14 @@
       <span class="progress-label" id="progressLabel">Item 0 / 0</span>
     </div>
     <button id="testSpeakButton" title="Test speech synthesis">🔊 Test Speak</button>
+    <div class="verbosity-container">
+      <label for="verbositySelect">Speech Verbosity:</label>
+      <select id="verbositySelect" title="Select what to speak">
+        <option value="all">All</option>
+        <option value="highlights" selected>Highlights &amp; Summary</option>
+        <option value="summary">Summary Only</option>
+      </select>
+    </div>
     <div class="slider-container">
       <div class="slider-row">
         <label for="rateSlider">Speed:</label>
