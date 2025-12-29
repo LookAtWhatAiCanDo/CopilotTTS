@@ -231,11 +231,61 @@ function queueSpeech(text) {
   }
 }
 
+// Filter text for better speech synthesis
+// Handles markdown complications: headers, separators, lists, etc.
+function filterTextForSpeech(text) {
+  if (!text || text.trim().length === 0) {
+    return text;
+  }
+  
+  let filtered = text;
+  
+  // 1. Handle separator lines (===..., ---..., etc.)
+  // Replace lines with 4+ consecutive repeated characters with a pause or skip them
+  filtered = filtered.replace(/^[=\-_*]{4,}$/gm, ''); // Remove separator lines entirely
+  
+  // 2. Handle headers with # symbols
+  // Add pauses after headers by converting them to sentences with periods
+  filtered = filtered.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, title) => {
+    // Count the number of # symbols to determine header level
+    const level = hashes.length;
+    // Return the title with a period to create a natural pause
+    return title + '.';
+  });
+  
+  // 3. Handle numbered lists (1., 2., 3., etc.)
+  // Announce the item number and add pauses between items
+  filtered = filtered.replace(/^(\d+)\.\s+(.+)$/gm, (match, number, content) => {
+    return `Item ${number}. ${content}.`;
+  });
+  
+  // 4. Handle bullet lists (*, -, +)
+  // Announce "bullet" and add pauses between items
+  filtered = filtered.replace(/^[\*\-\+]\s+(.+)$/gm, (match, content) => {
+    return `Bullet point. ${content}.`;
+  });
+  
+  // 5. Clean up excessive repeated punctuation (e.g., "!!!!" -> "!")
+  filtered = filtered.replace(/([!?.]){4,}/g, '$1');
+  
+  // 6. Remove any multiple consecutive line breaks that may have been created
+  filtered = filtered.replace(/\n{3,}/g, '\n\n');
+  
+  // 7. Clean up any leading/trailing whitespace
+  filtered = filtered.trim();
+  
+  return filtered;
+}
+
 // Extract text from a markdown paragraph element
 function extractTextFromElement(element) {
   // Get text content and clean it up
   const text = element.textContent.trim();
-  return text;
+  
+  // Apply speech filter to handle markdown complications
+  const filteredText = filterTextForSpeech(text);
+  
+  return filteredText;
 }
 
 // Helper function to check if an element has a parent with a specific class
