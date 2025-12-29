@@ -24,6 +24,8 @@ This repository contains a Chrome browser extension (Manifest V3) that monitors 
 
 ```
 CopilotTTS/
+├── .github/           # GitHub-specific files
+│   └── copilot-instructions.md  # Instructions for GitHub Copilot agents
 ├── manifest.json      # Extension configuration (Manifest V3)
 ├── content.js         # Content script injected into Copilot Tasks pages
 ├── popup.html         # Extension popup UI (navigation controls)
@@ -44,7 +46,7 @@ CopilotTTS/
    - Permissions: `activeTab`, `scripting`, `storage`
    - Runs at `document_idle` for better performance
 
-2. **content.js**: Main logic (750+ lines)
+2. **content.js**: Main logic (~740 lines)
    - Monitors GitHub Copilot Tasks page DOM
    - Extracts text from markdown containers
    - Manages speech queue with 2-second delays
