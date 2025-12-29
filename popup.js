@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const pitchValue = document.getElementById('pitchValue');
   const progressSlider = document.getElementById('progressSlider');
   const progressLabel = document.getElementById('progressLabel');
+  const verbositySelect = document.getElementById('verbositySelect');
+  const newOnlyCheckbox = document.getElementById('newOnlyCheckbox');
 
   // Helper function to send message to content script
   async function sendMessageToActiveTab(message) {
@@ -180,8 +182,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(refreshStatus, 2000);
   });
 
-  // Load saved rate and pitch values
-  chrome.storage.sync.get(['speechRate', 'speechPitch'], function(result) {
+  // Load saved rate, pitch, verbosity, and newOnly values
+  chrome.storage.sync.get(['speechRate', 'speechPitch', 'speechVerbosity', 'newOnly'], function(result) {
     if (result.speechRate !== undefined) {
       rateSlider.value = result.speechRate;
       rateValue.textContent = result.speechRate + 'x';
@@ -189,6 +191,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (result.speechPitch !== undefined) {
       pitchSlider.value = result.speechPitch;
       pitchValue.textContent = result.speechPitch + 'x';
+    }
+    if (result.speechVerbosity !== undefined) {
+      verbositySelect.value = result.speechVerbosity;
+    }
+    if (result.newOnly !== undefined) {
+      newOnlyCheckbox.checked = result.newOnly;
     }
   });
 
@@ -224,6 +232,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const targetIndex = parseInt(progressSlider.value);
     const maxValue = parseInt(progressSlider.max);
     progressLabel.textContent = `Item ${targetIndex} / ${maxValue}`;
+  });
+
+  // Verbosity select handler
+  verbositySelect.addEventListener('change', function() {
+    const verbosity = verbositySelect.value;
+    chrome.storage.sync.set({ speechVerbosity: verbosity });
+    sendMessageToActiveTab({ action: 'setVerbosity', verbosity: verbosity });
+    console.log(`${TAG}: Speech verbosity set to: ${verbosity}`);
+  });
+
+  // New Only checkbox handler
+  newOnlyCheckbox.addEventListener('change', function() {
+    const newOnly = newOnlyCheckbox.checked;
+    chrome.storage.sync.set({ newOnly: newOnly });
+    sendMessageToActiveTab({ action: 'setNewOnly', newOnly: newOnly });
+    console.log(`${TAG}: New Only set to: ${newOnly}`);
   });
 
   // Initial status check
