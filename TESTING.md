@@ -21,7 +21,9 @@
 
 **Expected Results:**
 - Console shows: "CopilotTTS-Content: Initializing on Copilot Tasks page"
-- Console shows: "CopilotTTS-Content: Found TaskChat container" (may take a moment)
+- Console shows: "CopilotTTS-Content: ⚠️  Waiting for user interaction (click or key press) to enable speech..."
+- Console shows: "CopilotTTS-Content: ⚠️  Speech is queued and will play automatically after you click anywhere on the page"
+- Console shows: "CopilotTTS-Content: Monitoring TaskChat for new sessions" (may take a moment)
 - No JavaScript errors
 
 ### Test 2: Automatic Speech on Page Load
@@ -227,7 +229,8 @@
 6. Open popup and check status
 
 **Expected Results:**
-- Console shows "Waiting for user interaction" message
+- Console shows "⚠️ Waiting for user interaction (click or key press) to enable speech..." message
+- Console shows "⚠️ Speech is queued and will play automatically after you click anywhere on the page"
 - Content is queued but not spoken
 - Popup status shows "Waiting for interaction (X queued)"
 - No speech occurs until user clicks or presses a key
@@ -237,7 +240,7 @@
 2. Observe speech and console
 
 **Expected Results:**
-- Console shows "User interaction detected - enabling speech"
+- Console shows "✓ User interaction detected - enabling speech"
 - All queued items start speaking with 2-second delays
 - Visual highlighting activates
 - Popup status updates to show current item
