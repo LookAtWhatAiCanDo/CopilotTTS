@@ -16,5 +16,17 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/copilot/tasks/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
 }

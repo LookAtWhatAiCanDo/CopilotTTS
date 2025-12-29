@@ -1,136 +1,234 @@
 // Popup script for Copilot Text To Speech extension
+// Handles navigation controls for spoken items
 
-// Constants
-const HELLO_TEXT = 'Hello World!';
-const STATUS_RESET_DELAY = 2000;
-const DESIRED_VOICE_NAME = 'Daniel (English (United Kingdom))';
-const DEFAULT_LANGUAGE = 'en-GB';
-const DEFAULT_VOLUME = 1;
-const DEFAULT_RATE = 1;
-const DEFAULT_PITCH = 1;
-const TAG = 'CopilotTTS';
+const TAG = 'CopilotTTS-Popup';
 
 document.addEventListener('DOMContentLoaded', function() {
-  const helloButton = document.getElementById('helloButton');
+  const previousButton = document.getElementById('previousButton');
+  const nextButton = document.getElementById('nextButton');
+  const playPauseButton = document.getElementById('playPauseButton');
+  const testSpeakButton = document.getElementById('testSpeakButton');
   const statusDiv = document.getElementById('status');
-  let statusResetTimeout = null;
+  const rateSlider = document.getElementById('rateSlider');
+  const rateValue = document.getElementById('rateValue');
+  const pitchSlider = document.getElementById('pitchSlider');
+  const pitchValue = document.getElementById('pitchValue');
+  const progressSlider = document.getElementById('progressSlider');
+  const progressLabel = document.getElementById('progressLabel');
 
-  // Helper function to clear pending timeout
-  function clearStatusResetTimeout() {
-    if (statusResetTimeout) {
-      clearTimeout(statusResetTimeout);
-      statusResetTimeout = null;
+  // Helper function to send message to content script
+  async function sendMessageToActiveTab(message) {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      if (!tab) {
+        statusDiv.textContent = 'No active tab';
+        return null;
+      }
+
+      // Check if this is a Copilot Tasks page
+      if (!tab.url || !tab.url.startsWith('https://github.com/copilot/tasks/')) {
+        statusDiv.textContent = 'Not on Copilot Tasks page';
+        return null;
+      }
+
+      const response = await chrome.tabs.sendMessage(tab.id, message);
+      return response;
+    } catch (error) {
+      console.error(`${TAG}: Error sending message:`, error);
+      statusDiv.textContent = 'Error communicating with page';
+      return null;
     }
   }
 
-  // Check if Web Speech API is supported
-  if (!('speechSynthesis' in window)) {
-    statusDiv.textContent = 'Speech API not supported';
-    helloButton.disabled = true;
-    return;
+  // Update status display
+  function updateStatus(response) {
+    if (response && response.success) {
+      if (response.isPaused !== undefined && response.isPaused) {
+        // Update button to show play
+        playPauseButton.textContent = '▶ Play';
+        playPauseButton.className = 'play';
+        playPauseButton.title = 'Resume speaking';
+        if (response.currentIndex >= 0 && response.total > 0) {
+          statusDiv.textContent = `Paused - Item ${response.currentIndex + 1} of ${response.total}`;
+        } else {
+          statusDiv.textContent = 'Paused';
+        }
+      } else {
+        // Update button to show pause
+        playPauseButton.textContent = '⏸ Pause';
+        playPauseButton.className = 'stop';
+        playPauseButton.title = 'Pause speaking';
+        if (response.total !== undefined) {
+          if (response.currentIndex >= 0) {
+            const current = response.currentIndex + 1;
+            statusDiv.textContent = `Item ${current} of ${response.total}`;
+          } else if (response.total === 0) {
+            statusDiv.textContent = 'No items';
+          } else {
+            statusDiv.textContent = 'Ready';
+          }
+        } else {
+          statusDiv.textContent = 'Ready';
+        }
+      }
+      
+      // Update progress slider
+      updateProgressSlider(response);
+    } else if (response && response.message) {
+      statusDiv.textContent = response.message;
+    }
   }
 
-  // Function to speak text with voice selection
-  function speak(text, voice, clear) {
-    const speechSynthesis = window.speechSynthesis;
-    if (!speechSynthesis) {
-      console.warn(`${TAG}: Speech synthesis not supported in this browser`);
-      statusDiv.textContent = 'Speech API not supported';
-      return;
-    }
-
-    const voices = speechSynthesis.getVoices();
-    if (voices.length === 0) {
-      // Voices aren't ready yet; delay until they fire (only once)
-      if (!speechSynthesis.onvoiceschanged) {
-        speechSynthesis.onvoiceschanged = () => {
-          speechSynthesis.onvoiceschanged = null; // Prevent multiple calls
-          speak(text, voice, clear);
-        };
-      }
-      return;
-    }
-
-    console.log(`${TAG}: speak("${text}", voice="${voice ? voice.name : 'default'}", clear=${clear})`);
-
-    if (!voice) {
-      voice = voices.find(v => v.name === DESIRED_VOICE_NAME);
-      if (!voice) {
-        // Fallback to first available voice if desired voice not found
-        voice = voices[0];
+  // Update progress slider position and range
+  function updateProgressSlider(response) {
+    if (response && response.total !== undefined) {
+      const total = response.total;
+      const currentIndex = response.currentIndex >= 0 ? response.currentIndex : 0;
+      
+      if (total > 0) {
+        progressSlider.disabled = false;
+        progressSlider.max = total;
+        progressSlider.value = currentIndex + 1;
+        progressLabel.textContent = `Item ${currentIndex + 1} / ${total}`;
+      } else {
+        progressSlider.disabled = true;
+        progressSlider.max = 1;
+        progressSlider.value = 1;
+        progressLabel.textContent = 'Item 0 / 0';
       }
     }
-    console.log(`${TAG}: Using voice: ${voice.name}`);
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.voice = voice;  // use specific voice
-    utterance.lang = voice.lang || DEFAULT_LANGUAGE; // use voice's language or default
-    utterance.volume = DEFAULT_VOLUME;
-    utterance.rate = DEFAULT_RATE;
-    utterance.pitch = DEFAULT_PITCH;
-
-    utterance.onstart = function() {
-      statusDiv.textContent = 'Speaking...';
-      helloButton.disabled = true;
-    };
-
-    utterance.onend = function() {
-      statusDiv.textContent = 'Finished speaking!';
-      helloButton.disabled = false;
-
-      // Reset status after delay
-      statusResetTimeout = setTimeout(function() {
-        statusDiv.textContent = 'Ready';
-        statusResetTimeout = null;
-      }, STATUS_RESET_DELAY);
-    };
-
-    utterance.onerror = function(event) {
-      let errorMessage;
-
-      // Provide user-friendly error messages
-      switch(event.error) {
-        case 'not-allowed':
-          errorMessage = 'Speech not allowed';
-          break;
-        case 'network':
-          errorMessage = 'Network error';
-          break;
-        case 'synthesis-unavailable':
-          errorMessage = 'Speech unavailable';
-          break;
-        case 'synthesis-failed':
-          errorMessage = 'Speech failed';
-          break;
-        default:
-          errorMessage = 'Speech error';
-      }
-
-      statusDiv.textContent = errorMessage;
-      helloButton.disabled = false;
-
-      // Clear any pending status reset
-      clearStatusResetTimeout();
-    };
-
-    if (clear) {
-      speechSynthesis.cancel();
-    }
-    speechSynthesis.speak(utterance);
   }
 
-  // Add click event listener to the hello button
-  helloButton.addEventListener('click', function() {
-    // Prevent multiple rapid clicks by checking if speech is already in progress
-    if (window.speechSynthesis.speaking) {
-      console.log(`${TAG}: Speech already in progress, ignoring click`);
-      return;
+  // Get initial status
+  async function refreshStatus() {
+    const response = await sendMessageToActiveTab({ action: 'getStatus' });
+    if (response && response.success) {
+      // Update play/pause button based on pause state
+      if (response.isPaused) {
+        playPauseButton.textContent = '▶ Play';
+        playPauseButton.className = 'play';
+        playPauseButton.title = 'Resume speaking';
+        if (response.currentIndex >= 0 && response.total > 0) {
+          statusDiv.textContent = `Paused - Item ${response.currentIndex + 1} of ${response.total}`;
+        } else {
+          statusDiv.textContent = 'Paused';
+        }
+      } else {
+        playPauseButton.textContent = '⏸ Pause';
+        playPauseButton.className = 'stop';
+        playPauseButton.title = 'Pause speaking';
+        if (response.total === 0) {
+          statusDiv.textContent = 'No items yet';
+        } else if (response.currentIndex >= 0) {
+          const current = response.currentIndex + 1;
+          statusDiv.textContent = `Item ${current} of ${response.total}`;
+        } else if (response.queueLength > 0) {
+          statusDiv.textContent = `Waiting for interaction (${response.queueLength} queued)`;
+        } else {
+          statusDiv.textContent = 'Ready';
+        }
+      }
+      
+      // Update progress slider
+      updateProgressSlider(response);
     }
+  }
 
-    // Clear any pending status reset
-    clearStatusResetTimeout();
-
-    // Speak the hello text
-    speak(HELLO_TEXT, null, true);
+  // Previous button handler
+  previousButton.addEventListener('click', async function() {
+    previousButton.disabled = true;
+    const response = await sendMessageToActiveTab({ action: 'previous' });
+    updateStatus(response);
+    previousButton.disabled = false;
   });
+
+  // Next button handler
+  nextButton.addEventListener('click', async function() {
+    nextButton.disabled = true;
+    const response = await sendMessageToActiveTab({ action: 'next' });
+    updateStatus(response);
+    nextButton.disabled = false;
+  });
+
+  // Play/Pause button handler
+  playPauseButton.addEventListener('click', async function() {
+    playPauseButton.disabled = true;
+    const response = await sendMessageToActiveTab({ action: 'stop' });
+    updateStatus(response);
+    playPauseButton.disabled = false;
+    
+    // Refresh status after a short delay
+    setTimeout(refreshStatus, 100);
+  });
+
+  // Test Speak button handler
+  testSpeakButton.addEventListener('click', async function() {
+    testSpeakButton.disabled = true;
+    statusDiv.textContent = 'Testing speech...';
+    const response = await sendMessageToActiveTab({ action: 'testSpeak' });
+    if (response && response.success) {
+      statusDiv.textContent = 'Test speech initiated';
+    } else if (response && response.message) {
+      statusDiv.textContent = response.message;
+    } else {
+      statusDiv.textContent = 'Test failed';
+    }
+    testSpeakButton.disabled = false;
+    
+    // Refresh status after a short delay
+    setTimeout(refreshStatus, 2000);
+  });
+
+  // Load saved rate and pitch values
+  chrome.storage.sync.get(['speechRate', 'speechPitch'], function(result) {
+    if (result.speechRate !== undefined) {
+      rateSlider.value = result.speechRate;
+      rateValue.textContent = result.speechRate + 'x';
+    }
+    if (result.speechPitch !== undefined) {
+      pitchSlider.value = result.speechPitch;
+      pitchValue.textContent = result.speechPitch + 'x';
+    }
+  });
+
+  // Rate slider handler
+  rateSlider.addEventListener('input', function() {
+    const rate = parseFloat(rateSlider.value);
+    rateValue.textContent = rate.toFixed(1) + 'x';
+    chrome.storage.sync.set({ speechRate: rate });
+    sendMessageToActiveTab({ action: 'setRate', rate: rate });
+  });
+
+  // Pitch slider handler
+  pitchSlider.addEventListener('input', function() {
+    const pitch = parseFloat(pitchSlider.value);
+    pitchValue.textContent = pitch.toFixed(1) + 'x';
+    chrome.storage.sync.set({ speechPitch: pitch });
+    sendMessageToActiveTab({ action: 'setPitch', pitch: pitch });
+  });
+
+  // Progress slider handler
+  progressSlider.addEventListener('change', async function() {
+    const targetIndex = parseInt(progressSlider.value) - 1; // Convert to 0-based index
+    progressLabel.textContent = `Jumping to ${targetIndex + 1}...`;
+    const response = await sendMessageToActiveTab({ action: 'jumpTo', index: targetIndex });
+    if (response && response.success) {
+      updateProgressSlider(response);
+      updateStatus(response);
+    }
+  });
+
+  // Update label as slider is being dragged (before release)
+  progressSlider.addEventListener('input', function() {
+    const targetIndex = parseInt(progressSlider.value);
+    const maxValue = parseInt(progressSlider.max);
+    progressLabel.textContent = `Item ${targetIndex} / ${maxValue}`;
+  });
+
+  // Initial status check
+  refreshStatus();
+
+  // Periodically refresh status to show changes
+  setInterval(refreshStatus, 2000);
 });
