@@ -28,24 +28,28 @@
 **Steps:**
 1. Navigate to an existing Copilot task with conversation history
 2. Wait for the page to fully load
-3. Listen for speech output
+3. Click anywhere on the page
+4. Listen for speech output
 
 **Expected Results:**
-- Extension speaks existing markdown paragraphs in order
+- Extension queues existing markdown content for speaking
+- After user clicks, speaks existing markdown paragraphs in order
 - Console shows "Speaking: ..." messages
 - No duplicate speaking of the same content
+- Visual highlighting appears on each item as it is spoken
 
 ### Test 3: Speech on New Content
 **Steps:**
-1. Navigate to a Copilot task page
+1. Navigate to a Copilot task page and click anywhere to enable speech
 2. Type a message and submit to Copilot
 3. Wait for Copilot's response to appear
 4. Listen for speech output
 
 **Expected Results:**
-- New markdown content is spoken as it appears
-- Console shows detection of new paragraphs
-- Speaking happens automatically without user intervention
+- New markdown content is spoken as it appears (after initial user interaction)
+- Console shows detection of new content
+- Speaking happens automatically with 2-second delays between items
+- Visual highlighting shows which element is being spoken
 
 ### Test 4: Popup Controls - Previous Button
 **Steps:**
@@ -72,28 +76,41 @@
 - Status updates to show new position (e.g., "Item 2 of 2")
 - Button temporarily disables during operation
 
-### Test 6: Popup Controls - Stop Button
+### Test 6: Popup Controls - Pause/Play Button
 **Steps:**
-1. Ensure speech is currently active
-2. Click "⏹ Stop" button
+1. Ensure speech is currently active (an item is being spoken or queued)
+2. Click "⏸ Pause" button
 
 **Expected Results:**
 - Speech stops immediately
-- Status shows "Stopped"
-- Speaking state is cleared
+- Button changes to "▶ Play"
+- Status shows "Paused - Item X of Y"
+- Queue is preserved
+
+**Steps to Resume:**
+1. Click "▶ Play" button
+
+**Expected Results:**
+- Speech resumes from the queue
+- Button changes back to "⏸ Pause"
+- Status updates to show current position
+- Remaining items continue to play
 
 ### Test 7: Popup Shows Correct Status
 **Steps:**
 1. Open popup on a Copilot Tasks page with no content yet
 2. Observe status
-3. Generate some content
-4. Re-open popup
-5. Observe status
+3. Generate some content (without clicking on page)
+4. Re-open popup and observe status
+5. Click anywhere on the page
+6. Re-open popup and observe status
 
 **Expected Results:**
 - Initially shows "No items yet" or "Ready"
-- After content appears, shows "Item X of Y"
+- After content appears (before interaction), shows "Waiting for interaction (X queued)"
+- After user clicks, shows "Item X of Y"
 - Status updates automatically (refreshes every 2 seconds)
+- When paused, shows "Paused - Item X of Y"
 
 ### Test 8: Extension Only Works on Copilot Tasks Pages
 **Steps:**
@@ -129,11 +146,137 @@
 - Attribute selectors match patterns correctly
 - No errors about missing elements
 
+### Test 11: Progress Slider Navigation
+**Steps:**
+1. Navigate to a task with multiple spoken items (at least 5)
+2. Open popup
+3. Observe progress slider and label
+4. Drag slider to item 3
+5. Release slider
+
+**Expected Results:**
+- Slider shows correct range (1 to total items)
+- Label updates as slider is dragged: "Item 3 / 5"
+- On release, jumps to and speaks item 3
+- Button remains enabled during navigation
+- Queue is rebuilt with remaining items
+
+### Test 12: Test Speak Button
+**Steps:**
+1. Open popup on a Copilot Tasks page
+2. Click "🔊 Test Speak" button
+3. Listen for speech
+
+**Expected Results:**
+- Speaks test phrase: "This is a test of the text to speech system."
+- Status updates to "Testing speech..." then "Test speech initiated"
+- Works regardless of whether user has interacted with page before
+- Provides user interaction needed to enable auto-speak
+
+### Test 13: Speech Rate Control
+**Steps:**
+1. Open popup
+2. Note default speed (1.2x)
+3. Adjust speed slider to 1.5x
+4. Trigger speech (navigate to an item or use Test Speak)
+5. Listen to speech rate
+
+**Expected Results:**
+- Slider shows current rate (1.2x by default)
+- Value updates as slider is adjusted
+- Speech rate changes immediately for new utterances
+- Setting is saved across popup sessions
+- Rate persists across page reloads
+
+### Test 14: Speech Pitch Control
+**Steps:**
+1. Open popup
+2. Note default pitch (1.0x)
+3. Adjust pitch slider to 1.5x
+4. Trigger speech (navigate to an item or use Test Speak)
+5. Listen to speech pitch
+
+**Expected Results:**
+- Slider shows current pitch (1.0x by default)
+- Value updates as slider is adjusted
+- Speech pitch changes immediately for new utterances
+- Setting is saved across popup sessions
+- Pitch persists across page reloads
+
+### Test 15: Visual Highlighting
+**Steps:**
+1. Navigate to a Copilot task page and interact with it
+2. Wait for content to be spoken or use Previous/Next buttons
+3. Observe the page while speech is active
+4. Wait for speech to complete
+
+**Expected Results:**
+- Element being spoken has yellow background highlight (rgba(255, 255, 0, 0.25))
+- Highlight applies smoothly with 0.3s transition
+- Highlight is removed when speech ends
+- Original background color is restored
+- Multiple items are highlighted sequentially as queue progresses
+
+### Test 16: User Interaction Requirement
+**Steps:**
+1. Navigate to a fresh Copilot task page (or reload)
+2. Open browser console
+3. Wait for content to appear
+4. Observe console messages
+5. Do NOT click or press any key
+6. Open popup and check status
+
+**Expected Results:**
+- Console shows "Waiting for user interaction" message
+- Content is queued but not spoken
+- Popup status shows "Waiting for interaction (X queued)"
+- No speech occurs until user clicks or presses a key
+
+**Follow-up Steps:**
+1. Click anywhere on the page
+2. Observe speech and console
+
+**Expected Results:**
+- Console shows "User interaction detected - enabling speech"
+- All queued items start speaking with 2-second delays
+- Visual highlighting activates
+- Popup status updates to show current item
+
+### Test 17: Speech Queue with Delays
+**Steps:**
+1. Navigate to a task and interact with page
+2. Trigger multiple items to speak (or wait for new content)
+3. Open console and observe timing
+4. Listen to speech pacing
+
+**Expected Results:**
+- Items are spoken one at a time
+- 2-second delay between items
+- Console logs show queue processing
+- Visual highlighting switches between items with proper delays
+- Queue continues until all items are spoken or paused
+
+### Test 18: Tool Log Exclusion
+**Steps:**
+1. Navigate to a task that uses tools (e.g., code execution, file operations)
+2. Submit a request that triggers tool execution
+3. Observe console logs
+4. Listen to what is spoken
+
+**Expected Results:**
+- Console shows tool containers are detected but skipped
+- Only Copilot's actual responses are spoken
+- Tool execution details/logs are NOT spoken
+- Status messages (shimmer text) like "Fueling the runtime engines…" ARE spoken
+- Item count only includes Copilot responses and status messages, not tool logs
+
 ## Known Limitations
 - Only works on pages under `https://github.com/copilot/tasks/*`
 - Requires Web Speech API support (modern Chrome/Chromium browsers)
-- Speaks in English (UK) by default (Daniel voice if available)
-- Cannot customize voice, rate, or pitch through UI
+- Speaks in English (UK) by default (Daniel voice if available, falls back to first available voice)
+- Requires user interaction (click or keypress) before speech can begin (browser security requirement)
+- Only speaks Copilot responses and status messages; tool execution logs are excluded
+- Speech rate and pitch can be adjusted but other voice characteristics cannot be customized through UI
 
 ## Debugging Tips
 - Check console for log messages tagged with "CopilotTTS-Content:" or "CopilotTTS-Popup:"
@@ -143,7 +286,11 @@
 - Reload the page if extension doesn't initialize properly
 
 ## Common Issues
-1. **No speech output**: Check that system volume is up and browser has permission for audio
+1. **No speech output**: 
+   - Check that system volume is up and browser has permission for audio
+   - Ensure you have clicked or pressed a key on the page (required for browser security)
+   - Try using the "Test Speak" button to verify speech works
 2. **Console shows "TaskChat container not found"**: Page may not be fully loaded yet, or DOM structure changed
 3. **"Not on Copilot Tasks page" in popup**: Verify URL matches `https://github.com/copilot/tasks/*`
-4. **Duplicate speech**: Check console for duplicate item detection messages
+4. **"Waiting for interaction" status**: Click anywhere on the page or press any key to enable speech
+5. **Speech queue not progressing**: Check if playback is paused (button shows "▶ Play"); click to resume
