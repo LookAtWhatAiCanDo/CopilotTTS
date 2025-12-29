@@ -247,8 +247,6 @@ function filterTextForSpeech(text) {
   // 2. Handle headers with # symbols
   // Add pauses after headers by converting them to sentences with periods
   filtered = filtered.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, title) => {
-    // Count the number of # symbols to determine header level
-    const level = hashes.length;
     // Return the title with a period to create a natural pause
     return title + '.';
   });
@@ -265,8 +263,8 @@ function filterTextForSpeech(text) {
     return `Bullet point. ${content}.`;
   });
   
-  // 5. Clean up excessive repeated punctuation (e.g., "!!!!" -> "!")
-  filtered = filtered.replace(/([!?.]){4,}/g, '$1');
+  // 5. Clean up excessive repeated punctuation (e.g., "!!!!" -> "!", but not periods)
+  filtered = filtered.replace(/([!?]){4,}/g, '$1');
   
   // 6. Remove any multiple consecutive line breaks that may have been created
   filtered = filtered.replace(/\n{3,}/g, '\n\n');
