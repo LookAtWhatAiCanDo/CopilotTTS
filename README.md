@@ -55,7 +55,11 @@ CopilotTTS/
 │   ├── icon16.png
 │   ├── icon48.png
 │   └── icon128.png
-└── README.md         # This file
+├── seeds/             # Sample Copilot Tasks HTML pages for testing
+│   ├── copilot_task1.html
+│   └── copilot_task2.html
+├── README.md          # This file
+└── TESTING.md         # Testing guide
 ```
 
 ## Requirements
