@@ -231,11 +231,189 @@ function queueSpeech(text) {
   }
 }
 
+// Helper function to format bullet point content for speech
+function formatBulletContent(content) {
+  if (content.trim().length === 0) {
+    return `Bullet point.`;
+  }
+  return `Bullet point. ${content}.`;
+}
+
+// Filter text for better speech synthesis
+// Handles markdown complications: headers, separators, lists, etc.
+function filterTextForSpeech(text) {
+  if (!text || text.trim().length === 0) {
+    return text;
+  }
+  
+  let filtered = text;
+  
+  // 1. Handle separator lines (===..., ---..., etc.)
+  // Remove lines with 4+ consecutive repeated characters
+  filtered = filtered.replace(/^[=_\*-]{4,}$/gm, '');
+  
+  // 2. Handle headers with # symbols
+  // Add pauses after headers by converting them to sentences with periods
+  filtered = filtered.replace(/^(#{1,6})[ \t]+(.+)$/gm, (match, hashes, title) => {
+    // Return the title with a period to create a natural pause
+    return title + '.';
+  });
+  
+  // 3. Handle numbered lists (1., 2., 3., etc.)
+  // Announce the item number and add pauses between items
+  filtered = filtered.replace(/^(\d+)\.[ \t]+([^\n]*)$/gm, (match, number, content) => {
+    // Handle empty list items gracefully
+    if (content.trim().length === 0) {
+      return `Item ${number}.`;
+    }
+    return `Item ${number}. ${content}.`;
+  });
+  
+  // 4. Handle bullet lists (*, -, +)
+  // Announce "bullet" and add pauses between items
+  // Handle dash bullets first (to process before star/plus for clarity)
+  filtered = filtered.replace(/^-[ \t]+([^\n]*)$/gm, (match, content) => formatBulletContent(content));
+  // Handle star and plus bullets
+  filtered = filtered.replace(/^[\*+][ \t]+([^\n]*)$/gm, (match, content) => formatBulletContent(content));
+  
+  // 5. Clean up excessive repeated punctuation (e.g., "!!!!" -> "!", but not periods)
+  filtered = filtered.replace(/([!?]){4,}/g, '$1');
+  
+  // 6. Remove any multiple consecutive line breaks that may have been created
+  filtered = filtered.replace(/\n{3,}/g, '\n\n');
+  
+  // 7. Clean up any leading/trailing whitespace
+  filtered = filtered.trim();
+  
+  return filtered;
+}
+
+// Helper function to extract text sections from HTML with structure awareness
+// Returns an array of text sections from block-level elements for more granular speech control
+function extractTextSectionsFromHTML(element) {
+  // Block-level elements that should be treated as separate speech sections
+  const sectionElements = new Set([
+    'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+    'LI', 'BLOCKQUOTE', 'PRE'
+  ]);
+  
+  // Container elements that we traverse but don't create sections for
+  const containerElements = new Set([
+    'DIV', 'UL', 'OL', 'TABLE', 'TR', 'TD', 'TH',
+    'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'NAV', 'ASIDE'
+  ]);
+  
+  const sections = [];
+  
+  // Extract text from a single section element
+  function extractSectionText(node) {
+    let text = '';
+    
+    function walkNodes(n) {
+      if (n.nodeType === Node.TEXT_NODE) {
+        const content = n.textContent.trim();
+        if (content) {
+          text += content + ' ';
+        }
+      } else if (n.nodeType === Node.ELEMENT_NODE) {
+        // For inline elements, just continue walking
+        for (let child of n.childNodes) {
+          walkNodes(child);
+        }
+      }
+    }
+    
+    walkNodes(node);
+    return text.trim();
+  }
+  
+  // Walk through nodes and identify sections
+  function findSections(node) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const tagName = node.tagName;
+      
+      // If this is a section element, extract its text as a separate item
+      if (sectionElements.has(tagName)) {
+        const text = extractSectionText(node);
+        console.log(`${TAG}: [extractTextSectionsFromHTML] Found ${tagName} element, text length: ${text.length}, text: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+        if (text) {
+          sections.push({ text, element: node });
+        } else {
+          console.log(`${TAG}: [extractTextSectionsFromHTML] ${tagName} has NO TEXT, skipping`);
+        }
+      } else if (containerElements.has(tagName)) {
+        // For containers, process children to find sections
+        for (let child of node.childNodes) {
+          findSections(child);
+        }
+      } else {
+        // For other elements, process children
+        for (let child of node.childNodes) {
+          findSections(child);
+        }
+      }
+    }
+  }
+  
+  findSections(element);
+  
+  console.log(`${TAG}: [extractTextSectionsFromHTML] Total sections found: ${sections.length}`);
+  return sections;
+}
+
+// Helper function to extract text from HTML with structure awareness (legacy)
+// Adds pauses after block-level elements for more natural speech
+function extractTextFromHTML(element) {
+  // Block-level elements that should have pauses after them
+  const blockElements = new Set([
+    'P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+    'LI', 'UL', 'OL', 'BLOCKQUOTE', 'PRE',
+    'TABLE', 'TR', 'TD', 'TH', 'SECTION', 'ARTICLE',
+    'HEADER', 'FOOTER', 'NAV', 'ASIDE'
+  ]);
+  
+  let text = '';
+  
+  // Walk through all child nodes
+  function walkNodes(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      // Add text content
+      const content = node.textContent.trim();
+      if (content) {
+        text += content + ' ';
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const tagName = node.tagName;
+      
+      // Process children first
+      for (let child of node.childNodes) {
+        walkNodes(child);
+      }
+      
+      // Add pause after block elements
+      if (blockElements.has(tagName)) {
+        // Add period for natural pause if text doesn't already end with punctuation
+        if (text.length > 0 && !/[.!?]\s*$/.test(text)) {
+          text = text.trim() + '. ';
+        }
+      }
+    }
+  }
+  
+  walkNodes(element);
+  
+  return text.trim();
+}
+
 // Extract text from a markdown paragraph element
 function extractTextFromElement(element) {
-  // Get text content and clean it up
-  const text = element.textContent.trim();
-  return text;
+  // Use HTML-aware extraction to preserve structure and add natural pauses
+  const text = extractTextFromHTML(element);
+  
+  // Apply speech filter to handle markdown complications
+  const filteredText = filterTextForSpeech(text);
+  
+  return filteredText;
 }
 
 // Helper function to check if an element has a parent with a specific class
@@ -294,17 +472,41 @@ function addSpokenItem(text, element) {
   return false;
 }
 
-// Process a markdown container and extract all inner text
+// Process a markdown container and extract text sections
 function processMarkdownContainer(container, sessionContainer) {
   // Check if this container should be spoken based on verbosity
   if (!shouldSpeakElement(container, sessionContainer)) {
+    console.log(`${TAG}: Skipping container due to verbosity filter`);
     return;
   }
   
-  // Extract all text content from the markdown container (not just <p> blocks)
-  const text = extractTextFromElement(container);
-  if (text) {
-    addSpokenItem(text, container);
+  console.log(`${TAG}: Processing markdown container for sections...`);
+  
+  // Try to extract text as separate sections for better granularity
+  const sections = extractTextSectionsFromHTML(container);
+  
+  console.log(`${TAG}: Found ${sections.length} sections in container`);
+  
+  if (sections.length > 0) {
+    // Process each section separately
+    sections.forEach((section, index) => {
+      console.log(`${TAG}: Section ${index + 1} [${section.element.tagName}]: "${section.text.substring(0, 80)}..."`);
+      const filteredText = filterTextForSpeech(section.text);
+      if (filteredText) {
+        console.log(`${TAG}: Filtered text: "${filteredText.substring(0, 80)}..."`);
+        const added = addSpokenItem(filteredText, section.element);
+        console.log(`${TAG}: Section ${index + 1} ${added ? 'ADDED' : 'SKIPPED (duplicate or filtered)'}`);
+      } else {
+        console.log(`${TAG}: Section ${index + 1} SKIPPED (empty after filtering)`);
+      }
+    });
+  } else {
+    console.log(`${TAG}: No sections found, using fallback extraction`);
+    // Fallback to extracting all text as one item (for elements with no block structure)
+    const text = extractTextFromElement(container);
+    if (text) {
+      addSpokenItem(text, container);
+    }
   }
 }
 
@@ -416,46 +618,74 @@ function processSessionContainer(sessionContainer) {
   console.log(`${TAG}: Set up content observer for session container`);
 }
 
-// Observe a markdown container for new paragraphs
+// Observe a markdown container for new content sections
 function observeMarkdownContainer(container, sessionContainer) {
+  // Section elements we want to detect when dynamically added
+  const sectionElements = new Set([
+    'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+    'LI', 'BLOCKQUOTE', 'PRE'
+  ]);
+  
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
-          if (node.tagName === 'P') {
-            //console.log(`${TAG}: Found new <p> element`);
-            // Check if this paragraph should be spoken based on verbosity
+          // Check if the added node itself is a section element
+          if (sectionElements.has(node.tagName)) {
             if (shouldSpeakElement(node, sessionContainer)) {
-              const text = extractTextFromElement(node);
-              if (addSpokenItem(text, node)) {
-                //console.log(`${TAG}: New paragraph detected`);
+              const text = extractSectionText(node);
+              const filteredText = filterTextForSpeech(text);
+              if (filteredText) {
+                addSpokenItem(filteredText, node);
               }
             }
           }
-          // Check for nested paragraphs
-          const nestedPs = node.querySelectorAll('p');
-          if (nestedPs.length > 0) {
-            //console.log(`${TAG}: Found ${nestedPs.length} nested <p> element(s)`);
-          }
-          nestedPs.forEach(p => {
-            if (shouldSpeakElement(p, sessionContainer)) {
-              const text = extractTextFromElement(p);
-              if (addSpokenItem(text, p)) {
-                //console.log(`${TAG}: New nested paragraph detected`);
+          
+          // Also check for nested section elements
+          sectionElements.forEach(tagName => {
+            const nestedElements = node.querySelectorAll(tagName.toLowerCase());
+            nestedElements.forEach(elem => {
+              if (shouldSpeakElement(elem, sessionContainer)) {
+                const text = extractSectionText(elem);
+                const filteredText = filterTextForSpeech(text);
+                if (filteredText) {
+                  addSpokenItem(filteredText, elem);
+                }
               }
-            }
+            });
           });
         }
       });
     });
   });
+  
+  // Helper to extract text from a single section (reused from extractTextSectionsFromHTML)
+  function extractSectionText(node) {
+    let text = '';
+    
+    function walkNodes(n) {
+      if (n.nodeType === Node.TEXT_NODE) {
+        const content = n.textContent.trim();
+        if (content) {
+          text += content + ' ';
+        }
+      } else if (n.nodeType === Node.ELEMENT_NODE) {
+        for (let child of n.childNodes) {
+          walkNodes(child);
+        }
+      }
+    }
+    
+    walkNodes(node);
+    return text.trim();
+  }
 
   observer.observe(container, {
     childList: true,
     subtree: true
   });
 
-  console.log(`${TAG}: Observing markdown container for new paragraphs`);
+  console.log(`${TAG}: Observing markdown container for new content sections`);
 }
 
 // Find and monitor the main TaskChat container
