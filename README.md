@@ -6,12 +6,14 @@ A Chrome browser extension that monitors GitHub Copilot Tasks pages and speaks t
 
 - Automatically monitors `https://github.com/copilot/tasks/*` pages
 - Speaks markdown content from Copilot's responses as they appear
-- **Intelligent markdown filtering** for better speech quality:
-  - Removes separator lines (`===...`, `---...`) to avoid repetitive speech
+- **Intelligent text filtering** for better speech quality:
+  - **HTML structure awareness**: Adds natural pauses after block elements (paragraphs, headers, list items)
+  - **Markdown filtering**: Removes separator lines (`===...`, `---...`) to avoid repetitive speech
   - Adds natural pauses after headers (`# Title`, `## Subtitle`)
   - Announces list item numbers ("Item 1", "Item 2")
   - Announces bullet points ("Bullet point")
   - Cleans up excessive punctuation (`!!!!` → `!`)
+  - Works with both markdown text and HTML-rendered content
 - Visual highlighting of the element currently being spoken
 - Navigation controls: Previous, Pause/Play, Next
 - Progress slider to jump to any item in the conversation
@@ -49,12 +51,14 @@ When new text content is detected, it is queued for speaking. After the first us
 - A 2-second delay between items for better pacing
 - Visual highlighting (yellow background) on the element currently being spoken
 - Configurable speech rate and pitch settings saved across sessions
-- **Intelligent markdown filtering** to improve speech quality:
-  - Headers (`# Title`, `## Subtitle`, etc.) are converted to natural sentences with pauses
+- **Intelligent text filtering** to improve speech quality:
+  - **HTML structure awareness**: Detects block elements (paragraphs, headers, list items) and adds natural pauses between them
+  - **Markdown filtering**: Headers (`# Title`, `## Subtitle`, etc.) are converted to natural sentences with pauses
   - Separator lines (`===...`, `---...`, etc.) are removed to avoid repetitive speech
   - Numbered lists (`1.`, `2.`, etc.) are announced as "Item 1", "Item 2" with pauses
   - Bullet lists (`*`, `-`, `+`) are announced as "Bullet point" with pauses
   - Excessive punctuation (`!!!!`, `????`) is cleaned up for cleaner speech
+  - Works seamlessly with both markdown text and HTML-rendered content from Copilot
 
 ## Installation
 
@@ -124,11 +128,13 @@ The extension consists of:
 - **Speech Queue**: Items are queued and spoken sequentially with 2-second delays
 - **Visual Feedback**: Yellow highlighting indicates which element is currently being spoken
 - **User Interaction Requirement**: Complies with browser autoplay policies by requiring initial user interaction
-- **Markdown Text Filtering**: Automatically processes markdown to improve speech quality
+- **Intelligent Text Filtering**: Automatically processes both markdown and HTML to improve speech quality
+  - HTML structure awareness: Adds natural pauses after block-level elements (paragraphs, headers, list items)
   - Removes separator lines (e.g., `============`)
   - Adds natural pauses after headers
   - Announces list item numbers and bullet points
   - Cleans up excessive punctuation
+  - Works with both plain markdown text and HTML-rendered content
 - **Persistent Settings**: Speech rate and pitch preferences are saved using chrome.storage.sync
 - **Smart Content Filtering**: Only speaks Copilot responses and status messages, excludes tool execution logs
 
