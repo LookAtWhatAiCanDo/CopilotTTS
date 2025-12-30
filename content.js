@@ -288,7 +288,76 @@ function filterTextForSpeech(text) {
   return filtered;
 }
 
-// Helper function to extract text from HTML with structure awareness
+// Helper function to extract text sections from HTML with structure awareness
+// Returns an array of text sections from block-level elements for more granular speech control
+function extractTextSectionsFromHTML(element) {
+  // Block-level elements that should be treated as separate speech sections
+  const sectionElements = new Set([
+    'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+    'LI', 'BLOCKQUOTE', 'PRE'
+  ]);
+  
+  // Container elements that we traverse but don't create sections for
+  const containerElements = new Set([
+    'DIV', 'UL', 'OL', 'TABLE', 'TR', 'TD', 'TH',
+    'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'NAV', 'ASIDE'
+  ]);
+  
+  const sections = [];
+  
+  // Extract text from a single section element
+  function extractSectionText(node) {
+    let text = '';
+    
+    function walkNodes(n) {
+      if (n.nodeType === Node.TEXT_NODE) {
+        const content = n.textContent.trim();
+        if (content) {
+          text += content + ' ';
+        }
+      } else if (n.nodeType === Node.ELEMENT_NODE) {
+        // For inline elements, just continue walking
+        for (let child of n.childNodes) {
+          walkNodes(child);
+        }
+      }
+    }
+    
+    walkNodes(node);
+    return text.trim();
+  }
+  
+  // Walk through nodes and identify sections
+  function findSections(node) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const tagName = node.tagName;
+      
+      // If this is a section element, extract its text as a separate item
+      if (sectionElements.has(tagName)) {
+        const text = extractSectionText(node);
+        if (text) {
+          sections.push({ text, element: node });
+        }
+      } else if (containerElements.has(tagName)) {
+        // For containers, process children to find sections
+        for (let child of node.childNodes) {
+          findSections(child);
+        }
+      } else {
+        // For other elements, process children
+        for (let child of node.childNodes) {
+          findSections(child);
+        }
+      }
+    }
+  }
+  
+  findSections(element);
+  
+  return sections;
+}
+
+// Helper function to extract text from HTML with structure awareness (legacy)
 // Adds pauses after block-level elements for more natural speech
 function extractTextFromHTML(element) {
   // Block-level elements that should have pauses after them
@@ -399,17 +468,30 @@ function addSpokenItem(text, element) {
   return false;
 }
 
-// Process a markdown container and extract all inner text
+// Process a markdown container and extract text sections
 function processMarkdownContainer(container, sessionContainer) {
   // Check if this container should be spoken based on verbosity
   if (!shouldSpeakElement(container, sessionContainer)) {
     return;
   }
   
-  // Extract all text content from the markdown container (not just <p> blocks)
-  const text = extractTextFromElement(container);
-  if (text) {
-    addSpokenItem(text, container);
+  // Try to extract text as separate sections for better granularity
+  const sections = extractTextSectionsFromHTML(container);
+  
+  if (sections.length > 0) {
+    // Process each section separately
+    sections.forEach(section => {
+      const filteredText = filterTextForSpeech(section.text);
+      if (filteredText) {
+        addSpokenItem(filteredText, section.element);
+      }
+    });
+  } else {
+    // Fallback to extracting all text as one item (for elements with no block structure)
+    const text = extractTextFromElement(container);
+    if (text) {
+      addSpokenItem(text, container);
+    }
   }
 }
 
