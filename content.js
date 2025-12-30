@@ -288,10 +288,54 @@ function filterTextForSpeech(text) {
   return filtered;
 }
 
+// Helper function to extract text from HTML with structure awareness
+// Adds pauses after block-level elements for more natural speech
+function extractTextFromHTML(element) {
+  // Block-level elements that should have pauses after them
+  const blockElements = new Set([
+    'P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+    'LI', 'UL', 'OL', 'BLOCKQUOTE', 'PRE',
+    'TABLE', 'TR', 'TD', 'TH', 'SECTION', 'ARTICLE',
+    'HEADER', 'FOOTER', 'NAV', 'ASIDE'
+  ]);
+  
+  let text = '';
+  
+  // Walk through all child nodes
+  function walkNodes(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      // Add text content
+      const content = node.textContent.trim();
+      if (content) {
+        text += content + ' ';
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const tagName = node.tagName;
+      
+      // Process children first
+      for (let child of node.childNodes) {
+        walkNodes(child);
+      }
+      
+      // Add pause after block elements
+      if (blockElements.has(tagName)) {
+        // Add period for natural pause if text doesn't already end with punctuation
+        if (text.length > 0 && !/[.!?]\s*$/.test(text)) {
+          text = text.trim() + '. ';
+        }
+      }
+    }
+  }
+  
+  walkNodes(element);
+  
+  return text.trim();
+}
+
 // Extract text from a markdown paragraph element
 function extractTextFromElement(element) {
-  // Get text content and clean it up
-  const text = element.textContent.trim();
+  // Use HTML-aware extraction to preserve structure and add natural pauses
+  const text = extractTextFromHTML(element);
   
   // Apply speech filter to handle markdown complications
   const filteredText = filterTextForSpeech(text);
