@@ -6,6 +6,7 @@ A Chrome browser extension that monitors GitHub Copilot Tasks pages and speaks t
 
 - Automatically monitors `https://github.com/copilot/tasks/*` pages
 - Speaks markdown content from Copilot's responses as they appear
+- **Granular content breakdown**: Each paragraph, header, and list item becomes a separate speech item for easy navigation
 - **Intelligent text filtering** for better speech quality:
   - **HTML structure awareness**: Adds natural pauses after block elements (paragraphs, headers, list items)
   - **Markdown filtering**: Removes separator lines (`===...`, `---...`) to avoid repetitive speech
@@ -15,7 +16,7 @@ A Chrome browser extension that monitors GitHub Copilot Tasks pages and speaks t
   - Cleans up excessive punctuation (`!!!!` → `!`)
   - Works with both markdown text and HTML-rendered content
 - Visual highlighting of the element currently being spoken
-- Navigation controls: Previous, Pause/Play, Next
+- Navigation controls: Previous, Pause/Play, Next (navigate between individual sections)
 - Progress slider to jump to any item in the conversation
 - Test Speak button to verify speech functionality
 - **Speech verbosity control** with three levels:
@@ -48,11 +49,12 @@ The **New Only** checkbox (enabled by default) controls whether to skip pre-exis
 - When unchecked: Speaks all content found on the page, including what was already there
 
 When new text content is detected, it is queued for speaking. After the first user interaction (click or keypress), items are spoken automatically using the Web Speech API with:
+- **Granular section breakdown**: Content is split into individual paragraphs, headers, and list items for better navigation
 - A 2-second delay between items for better pacing
 - Visual highlighting (yellow background) on the element currently being spoken
 - Configurable speech rate and pitch settings saved across sessions
 - **Intelligent text filtering** to improve speech quality:
-  - **HTML structure awareness**: Detects block elements (paragraphs, headers, list items) and adds natural pauses between them
+  - **HTML structure awareness**: Detects block elements (paragraphs, headers, list items) and creates separate speech items for each
   - **Markdown filtering**: Headers (`# Title`, `## Subtitle`, etc.) are converted to natural sentences with pauses
   - Separator lines (`===...`, `---...`, etc.) are removed to avoid repetitive speech
   - Numbered lists (`1.`, `2.`, etc.) are announced as "Item 1", "Item 2" with pauses
@@ -125,11 +127,13 @@ The extension consists of:
 - **Manifest** (`manifest.json`): Extension configuration with proper permissions and content script injection
 
 ### Key Features
+- **Granular Navigation**: Content is split into individual sections (paragraphs, headers, list items) for precise navigation
 - **Speech Queue**: Items are queued and spoken sequentially with 2-second delays
 - **Visual Feedback**: Yellow highlighting indicates which element is currently being spoken
 - **User Interaction Requirement**: Complies with browser autoplay policies by requiring initial user interaction
 - **Intelligent Text Filtering**: Automatically processes both markdown and HTML to improve speech quality
-  - HTML structure awareness: Adds natural pauses after block-level elements (paragraphs, headers, list items)
+  - Section breakdown: Each paragraph, header, and list item becomes a separate navigable speech item
+  - HTML structure awareness: Adds natural pauses after block-level elements
   - Removes separator lines (e.g., `============`)
   - Adds natural pauses after headers
   - Announces list item numbers and bullet points
