@@ -472,21 +472,32 @@ function addSpokenItem(text, element) {
 function processMarkdownContainer(container, sessionContainer) {
   // Check if this container should be spoken based on verbosity
   if (!shouldSpeakElement(container, sessionContainer)) {
+    console.log(`${TAG}: Skipping container due to verbosity filter`);
     return;
   }
+  
+  console.log(`${TAG}: Processing markdown container for sections...`);
   
   // Try to extract text as separate sections for better granularity
   const sections = extractTextSectionsFromHTML(container);
   
+  console.log(`${TAG}: Found ${sections.length} sections in container`);
+  
   if (sections.length > 0) {
     // Process each section separately
-    sections.forEach(section => {
+    sections.forEach((section, index) => {
+      console.log(`${TAG}: Section ${index + 1} [${section.element.tagName}]: "${section.text.substring(0, 80)}..."`);
       const filteredText = filterTextForSpeech(section.text);
       if (filteredText) {
-        addSpokenItem(filteredText, section.element);
+        console.log(`${TAG}: Filtered text: "${filteredText.substring(0, 80)}..."`);
+        const added = addSpokenItem(filteredText, section.element);
+        console.log(`${TAG}: Section ${index + 1} ${added ? 'ADDED' : 'SKIPPED (duplicate or filtered)'}`);
+      } else {
+        console.log(`${TAG}: Section ${index + 1} SKIPPED (empty after filtering)`);
       }
     });
   } else {
+    console.log(`${TAG}: No sections found, using fallback extraction`);
     // Fallback to extracting all text as one item (for elements with no block structure)
     const text = extractTextFromElement(container);
     if (text) {
@@ -603,46 +614,74 @@ function processSessionContainer(sessionContainer) {
   console.log(`${TAG}: Set up content observer for session container`);
 }
 
-// Observe a markdown container for new paragraphs
+// Observe a markdown container for new content sections
 function observeMarkdownContainer(container, sessionContainer) {
+  // Section elements we want to detect when dynamically added
+  const sectionElements = new Set([
+    'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+    'LI', 'BLOCKQUOTE', 'PRE'
+  ]);
+  
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
-          if (node.tagName === 'P') {
-            //console.log(`${TAG}: Found new <p> element`);
-            // Check if this paragraph should be spoken based on verbosity
+          // Check if the added node itself is a section element
+          if (sectionElements.has(node.tagName)) {
             if (shouldSpeakElement(node, sessionContainer)) {
-              const text = extractTextFromElement(node);
-              if (addSpokenItem(text, node)) {
-                //console.log(`${TAG}: New paragraph detected`);
+              const text = extractSectionText(node);
+              const filteredText = filterTextForSpeech(text);
+              if (filteredText) {
+                addSpokenItem(filteredText, node);
               }
             }
           }
-          // Check for nested paragraphs
-          const nestedPs = node.querySelectorAll('p');
-          if (nestedPs.length > 0) {
-            //console.log(`${TAG}: Found ${nestedPs.length} nested <p> element(s)`);
-          }
-          nestedPs.forEach(p => {
-            if (shouldSpeakElement(p, sessionContainer)) {
-              const text = extractTextFromElement(p);
-              if (addSpokenItem(text, p)) {
-                //console.log(`${TAG}: New nested paragraph detected`);
+          
+          // Also check for nested section elements
+          sectionElements.forEach(tagName => {
+            const nestedElements = node.querySelectorAll(tagName.toLowerCase());
+            nestedElements.forEach(elem => {
+              if (shouldSpeakElement(elem, sessionContainer)) {
+                const text = extractSectionText(elem);
+                const filteredText = filterTextForSpeech(text);
+                if (filteredText) {
+                  addSpokenItem(filteredText, elem);
+                }
               }
-            }
+            });
           });
         }
       });
     });
   });
+  
+  // Helper to extract text from a single section (reused from extractTextSectionsFromHTML)
+  function extractSectionText(node) {
+    let text = '';
+    
+    function walkNodes(n) {
+      if (n.nodeType === Node.TEXT_NODE) {
+        const content = n.textContent.trim();
+        if (content) {
+          text += content + ' ';
+        }
+      } else if (n.nodeType === Node.ELEMENT_NODE) {
+        for (let child of n.childNodes) {
+          walkNodes(child);
+        }
+      }
+    }
+    
+    walkNodes(node);
+    return text.trim();
+  }
 
   observer.observe(container, {
     childList: true,
     subtree: true
   });
 
-  console.log(`${TAG}: Observing markdown container for new paragraphs`);
+  console.log(`${TAG}: Observing markdown container for new content sections`);
 }
 
 // Find and monitor the main TaskChat container
