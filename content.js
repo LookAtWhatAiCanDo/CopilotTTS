@@ -335,8 +335,11 @@ function extractTextSectionsFromHTML(element) {
       // If this is a section element, extract its text as a separate item
       if (sectionElements.has(tagName)) {
         const text = extractSectionText(node);
+        console.log(`${TAG}: [extractTextSectionsFromHTML] Found ${tagName} element, text length: ${text.length}, text: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
         if (text) {
           sections.push({ text, element: node });
+        } else {
+          console.log(`${TAG}: [extractTextSectionsFromHTML] ${tagName} has NO TEXT, skipping`);
         }
       } else if (containerElements.has(tagName)) {
         // For containers, process children to find sections
@@ -354,6 +357,7 @@ function extractTextSectionsFromHTML(element) {
   
   findSections(element);
   
+  console.log(`${TAG}: [extractTextSectionsFromHTML] Total sections found: ${sections.length}`);
   return sections;
 }
 
