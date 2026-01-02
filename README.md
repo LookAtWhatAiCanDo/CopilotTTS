@@ -15,6 +15,7 @@ A Chrome browser extension that monitors GitHub Copilot Tasks pages and speaks t
   - **Highlights & Summary** (default): Speaks Copilot responses and summaries, excludes tool logs
   - **Summary Only**: Speaks only final summary messages from Copilot
 - **New Only mode** (checkbox, enabled by default): Skip pre-existing content and only speak new content that appears after extension loads
+- **Debug Mode** (checkbox, disabled by default): Shows element class names on hover for troubleshooting and understanding content structure
 - Adjustable speech rate (0.5x to 2x, default 1.2x)
 - Adjustable speech pitch (0.5x to 2x, default 1.0x)
 - Speech queue with 2-second delays between items for better pacing
@@ -70,11 +71,38 @@ When new text content is detected, it is queued for speaking. After the first us
      - **Highlights & Summary**: Speaks Copilot responses and summaries (default)
      - **Summary Only**: Speaks only final summary messages
    - **New Only**: Checkbox to skip pre-existing content (enabled by default)
+   - **Debug Mode**: Checkbox to show element class names on hover (disabled by default, useful for troubleshooting)
    - **Speed Slider**: Adjust speech rate (0.5x to 2x, default 1.2x)
    - **Pitch Slider**: Adjust speech pitch (0.5x to 2x, default 1.0x)
 6. The status shows your current position (e.g., "Item 3 of 10")
 
 **Note:** The extension requires a user interaction (click or keypress) before it can speak. This is a browser security requirement. Once you interact with the page, all queued content will be spoken automatically with a 2-second delay between items. Elements being spoken are highlighted with a yellow background.
+
+## Debug Mode
+
+The **Debug Mode** feature helps understand what content is being spoken and troubleshoot issues by showing element class names on hover.
+
+**To enable Debug Mode:**
+1. Click the extension icon to open the popup
+2. Check the "Debug Mode (show class names on hover)" checkbox
+3. Close the popup and hover over any div element on the page
+
+**Features:**
+- Shows native browser tooltips with element class names when hovering over divs
+- Displays `<div> (no classes)` for elements without classes
+- Helps identify key containers like:
+  - `TaskChat-module__stickableContainer--*`
+  - `Session-module__detailsContainer--*`
+  - `MarkdownRenderer-module__container--*`
+  - `Tool-module__detailsContainer--*`
+- Automatically applies to dynamically added content
+- Setting persists across page reloads and browser sessions
+
+**Use Cases:**
+- Understanding GitHub Copilot's DOM structure
+- Troubleshooting speech issues (e.g., why certain content is/isn't spoken)
+- Identifying which elements are being targeted for speech
+- Debugging the extension's behavior with new GitHub UI updates
 
 ## File Structure
 

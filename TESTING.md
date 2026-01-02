@@ -297,3 +297,51 @@
 3. **"Not on Copilot Tasks page" in popup**: Verify URL matches `https://github.com/copilot/tasks/*`
 4. **"Waiting for interaction" status**: Click anywhere on the page or press any key to enable speech
 5. **Speech queue not progressing**: Check if playback is paused (button shows "▶ Play"); click to resume
+
+## Test 22: Debug Mode Feature
+**Steps:**
+1. Navigate to a Copilot task page
+2. Open the extension popup
+3. Check the "Debug Mode (show class names on hover)" checkbox
+4. Close the popup
+5. Hover over various div elements on the page
+
+**Expected Results:**
+- Console shows: "CopilotTTS-Content: Debug mode enabled"
+- Console shows: "CopilotTTS-Content: Applying debug mode tooltips"
+- Console shows: "CopilotTTS-Content: Found X div elements to apply tooltips"
+- Hovering over div elements shows native browser tooltips with class names
+- Elements without classes show "<div> (no classes)" in tooltip
+- Key containers show their full class names (e.g., "Session-module__detailsContainer--abc123")
+
+**Steps to Disable:**
+1. Open the popup again
+2. Uncheck the "Debug Mode" checkbox
+
+**Expected Results:**
+- Console shows: "CopilotTTS-Content: Debug mode disabled"
+- Console shows: "CopilotTTS-Content: Removing debug mode tooltips"
+- Tooltips are removed from all elements
+- Hovering no longer shows class names
+
+**Steps to Test Persistence:**
+1. Enable debug mode via checkbox
+2. Close and reopen the popup
+3. Reload the page
+
+**Expected Results:**
+- Debug mode checkbox remains checked after reopening popup
+- Debug mode is automatically applied after page reload
+- Console shows: "CopilotTTS-Content: Loaded debug mode: true"
+- Tooltips appear automatically without needing to toggle again
+
+**Steps to Test Dynamic Content:**
+1. Enable debug mode
+2. Type a message and submit to Copilot
+3. Wait for new content to appear
+4. Hover over the new div elements
+
+**Expected Results:**
+- New content also has tooltips applied automatically
+- No need to re-enable debug mode for new elements
+- All dynamically added divs get tooltips
