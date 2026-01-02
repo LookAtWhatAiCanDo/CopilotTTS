@@ -303,11 +303,11 @@ function applyDebugTooltipToElement(element) {
   
   // Get all class names
   const classNames = element.className;
-  if (classNames) {
-    // Set the title attribute with the class names
-    element.setAttribute('data-tts-debug-tooltip', 'true');
-    element.setAttribute('title', classNames);
-  }
+  const tooltipText = classNames || `<div> (no classes)`;
+  
+  // Set the title attribute with the class names or indication of no classes
+  element.setAttribute('data-tts-debug-tooltip', 'true');
+  element.setAttribute('title', tooltipText);
 }
 
 // Apply debug mode tooltips to an element and all its div children
@@ -336,13 +336,13 @@ function removeDebugMode() {
     return;
   }
   
-  // Find all divs with debug tooltips
-  const divs = taskChatContainer.querySelectorAll('div[data-tts-debug-tooltip="true"]');
-  console.log(`${TAG}: Removing tooltips from ${divs.length} div elements`);
+  // Find all elements with debug tooltips (more efficient selector)
+  const elements = taskChatContainer.querySelectorAll('[data-tts-debug-tooltip="true"]');
+  console.log(`${TAG}: Removing tooltips from ${elements.length} elements`);
   
-  divs.forEach(div => {
-    div.removeAttribute('data-tts-debug-tooltip');
-    div.removeAttribute('title');
+  elements.forEach(element => {
+    element.removeAttribute('data-tts-debug-tooltip');
+    element.removeAttribute('title');
   });
 }
 
