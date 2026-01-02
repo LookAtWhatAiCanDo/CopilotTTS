@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const progressLabel = document.getElementById('progressLabel');
   const verbositySelect = document.getElementById('verbositySelect');
   const newOnlyCheckbox = document.getElementById('newOnlyCheckbox');
+  const debugModeCheckbox = document.getElementById('debugModeCheckbox');
 
   // Helper function to send message to content script
   async function sendMessageToActiveTab(message) {
@@ -182,8 +183,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(refreshStatus, 2000);
   });
 
-  // Load saved rate, pitch, verbosity, and newOnly values
-  chrome.storage.sync.get(['speechRate', 'speechPitch', 'speechVerbosity', 'newOnly'], function(result) {
+  // Load saved rate, pitch, verbosity, newOnly, and debugMode values
+  chrome.storage.sync.get(['speechRate', 'speechPitch', 'speechVerbosity', 'newOnly', 'debugMode'], function(result) {
     if (result.speechRate !== undefined) {
       rateSlider.value = result.speechRate;
       rateValue.textContent = result.speechRate + 'x';
@@ -197,6 +198,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (result.newOnly !== undefined) {
       newOnlyCheckbox.checked = result.newOnly;
+    }
+    if (result.debugMode !== undefined) {
+      debugModeCheckbox.checked = result.debugMode;
     }
   });
 
@@ -248,6 +252,14 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.storage.sync.set({ newOnly: newOnly });
     sendMessageToActiveTab({ action: 'setNewOnly', newOnly: newOnly });
     console.log(`${TAG}: New Only set to: ${newOnly}`);
+  });
+
+  // Debug Mode checkbox handler
+  debugModeCheckbox.addEventListener('change', function() {
+    const debugMode = debugModeCheckbox.checked;
+    chrome.storage.sync.set({ debugMode: debugMode });
+    sendMessageToActiveTab({ action: 'setDebugMode', debugMode: debugMode });
+    console.log(`${TAG}: Debug Mode set to: ${debugMode}`);
   });
 
   // Initial status check
