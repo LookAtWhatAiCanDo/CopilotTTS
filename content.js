@@ -10,6 +10,7 @@ const DEFAULT_PITCH = 1;
 const DEFAULT_VERBOSITY = 'highlights'; // Default verbosity: Highlights & Summary
 const DEFAULT_NEW_ONLY = true; // Default: skip pre-existing content
 const GRACE_PERIOD_MS = 2000; // Time window to consider content as pre-existing (milliseconds)
+const DEFAULT_DEBUG_MODE = false; // Default: debug mode off
 
 // State management
 let spokenItems = [];
@@ -26,6 +27,7 @@ let speechPitch = DEFAULT_PITCH; // Current speech pitch
 let speechVerbosity = DEFAULT_VERBOSITY; // Current speech verbosity: 'all', 'highlights', or 'summary'
 let newOnlyMode = DEFAULT_NEW_ONLY; // Whether to skip pre-existing content
 let extensionInitTime = Date.now(); // Track when extension initialized to filter old content
+let debugMode = DEFAULT_DEBUG_MODE; // Whether debug mode is enabled
 
 // Initialize voices
 function initVoices() {
@@ -42,8 +44,8 @@ function initVoices() {
   selectedVoice = voices.find(v => v.name === DESIRED_VOICE_NAME) || voices[0];
   console.log(`${TAG}: initVoices: Using voice: ${selectedVoice.name}`);
   
-  // Load saved rate, pitch, verbosity, and newOnly from storage
-  chrome.storage.sync.get(['speechRate', 'speechPitch', 'speechVerbosity', 'newOnly'], function(result) {
+  // Load saved rate, pitch, verbosity, newOnly, and debugMode from storage
+  chrome.storage.sync.get(['speechRate', 'speechPitch', 'speechVerbosity', 'newOnly', 'debugMode'], function(result) {
     if (result.speechRate !== undefined) {
       speechRate = result.speechRate;
       console.log(`${TAG}: Loaded speech rate: ${speechRate}`);
@@ -59,6 +61,14 @@ function initVoices() {
     if (result.newOnly !== undefined) {
       newOnlyMode = result.newOnly;
       console.log(`${TAG}: Loaded new only mode: ${newOnlyMode}`);
+    }
+    if (result.debugMode !== undefined) {
+      debugMode = result.debugMode;
+      console.log(`${TAG}: Loaded debug mode: ${debugMode}`);
+      // Apply debug mode if it was saved as enabled
+      if (debugMode) {
+        applyDebugMode();
+      }
     }
   });
 }
@@ -266,6 +276,88 @@ function shouldSpeakElement(element, container) {
   return !hasParentWithClass(element, container, 'Tool-module__detailsContainer');
 }
 
+// Apply debug mode tooltips to all divs under TaskChat container
+function applyDebugMode() {
+  console.log(`${TAG}: Applying debug mode tooltips`);
+  
+  const taskChatContainer = document.querySelector('[class*="TaskChat-module__stickableContainer--"]');
+  if (!taskChatContainer) {
+    console.log(`${TAG}: TaskChat container not found for debug mode`);
+    return;
+  }
+  
+  // Find all div elements under the TaskChat container
+  const divs = taskChatContainer.querySelectorAll('div');
+  console.log(`${TAG}: Found ${divs.length} div elements to apply tooltips`);
+  
+  divs.forEach(div => {
+    applyDebugTooltipToElement(div);
+  });
+}
+
+// Apply debug tooltip to a single element
+function applyDebugTooltipToElement(element) {
+  if (element.nodeType !== Node.ELEMENT_NODE || element.tagName !== 'DIV') {
+    return;
+  }
+  
+  // Get all class names
+  const classNames = element.className;
+  const tooltipText = classNames || `<div> (no classes)`;
+  
+  // Set the title attribute with the class names or indication of no classes
+  element.setAttribute('data-tts-debug-tooltip', 'true');
+  element.setAttribute('title', tooltipText);
+}
+
+// Apply debug mode tooltips to an element and all its div children
+function applyDebugModeToElement(element) {
+  if (!debugMode) {
+    return;
+  }
+  
+  // Apply to the element itself if it's a div
+  applyDebugTooltipToElement(element);
+  
+  // Apply to all div children
+  const divs = element.querySelectorAll ? element.querySelectorAll('div') : [];
+  divs.forEach(div => {
+    applyDebugTooltipToElement(div);
+  });
+}
+
+// Remove debug mode tooltips
+function removeDebugMode() {
+  console.log(`${TAG}: Removing debug mode tooltips`);
+  
+  const taskChatContainer = document.querySelector('[class*="TaskChat-module__stickableContainer--"]');
+  if (!taskChatContainer) {
+    console.log(`${TAG}: TaskChat container not found for debug mode removal`);
+    return;
+  }
+  
+  // Find all elements with debug tooltips (more efficient selector)
+  const elements = taskChatContainer.querySelectorAll('[data-tts-debug-tooltip="true"]');
+  console.log(`${TAG}: Removing tooltips from ${elements.length} elements`);
+  
+  elements.forEach(element => {
+    element.removeAttribute('data-tts-debug-tooltip');
+    element.removeAttribute('title');
+  });
+}
+
+// Toggle debug mode
+function toggleDebugMode(enabled) {
+  debugMode = enabled;
+  console.log(`${TAG}: Debug mode ${enabled ? 'enabled' : 'disabled'}`);
+  
+  if (enabled) {
+    applyDebugMode();
+  } else {
+    removeDebugMode();
+  }
+}
+
 // Helper function to add a spoken item if not already tracked
 function addSpokenItem(text, element) {
   if (text && !spokenItems.some(item => item.text === text)) {
@@ -368,6 +460,9 @@ function processSessionContainer(sessionContainer) {
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
+          // Apply debug mode to new node if enabled
+          applyDebugModeToElement(node);
+          
           // Check if this node or its children contain markdown containers
           let newMarkdownContainers = [];
           if (node.matches && node.matches('[class*="MarkdownRenderer-module__container--"]')) {
@@ -483,6 +578,9 @@ function monitorTaskChat() {
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
+          // Apply debug mode to new node if enabled
+          applyDebugModeToElement(node);
+          
           // Check if this is a session container
           if (node.classList && Array.from(node.classList).some(c => c.includes('Session-module__detailsContainer--'))) {
             //console.log(`${TAG}: Found new session container element`);
@@ -643,6 +741,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Update new only mode
       newOnlyMode = message.newOnly ?? DEFAULT_NEW_ONLY;
       console.log(`${TAG}: New Only mode set to: ${newOnlyMode}`);
+      sendResponse({ success: true });
+      break;
+
+    case 'setDebugMode':
+      // Update debug mode
+      toggleDebugMode(message.debugMode ?? DEFAULT_DEBUG_MODE);
       sendResponse({ success: true });
       break;
 
